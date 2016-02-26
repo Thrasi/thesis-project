@@ -1,0 +1,54 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage[utf8]{inputenc}
+
+%opening
+\title{Master Thesis Specification \\ Multi-task Human Image Parsing }
+\author{Student: Magnus thor Benediktsson, bened@kth.se \\ Supervisor: Hossein Azizpour \\ Examiner Danica Kragic}
+
+\begin{document}
+
+\maketitle
+
+%\begin{abstract}
+
+%\end{abstract}
+
+\section{Background and Objective}
+
+Human detection is central to many computer vision tasks such as surveilance or assisted driving.  Following the success of ConvNets on classification tasks recent work has focused on applying them to pose estimation\cite{Tompson2015}\cite{Wei2016} and semantic segmentation\cite{Long2014},\cite{Noh2015} with state-of-the-art performance.
+
+It is reasonable to expect semantic segmentation of humans and estimation of human joint locations to have similiar features.  The main goal of this thesis will be to train a single multi-task fully convolutional network(FCN)\cite{Long2014}\cite{references in long} for human image parsing such as semantic segmentation and pose estimation. It is interesting to see whether the multi-tasking will benefit the individual tasks.
+
+The sharing of features among various tasks may help regularize the network and dampen overfitting.  This may enable us to learn larger networks.  More tasks that could be incorporated include Human detection, Human Action Recognition etc. There is also an computational efficiency benefit from performing two tasks with a single network as many computations will be shared accross tasks.
+
+Stat-of-the-art ConvNet pose estimators incorporate multiple network in connected in a cascade like manner to refine the joint locations\cite{Tompson2015}\cite{Wei2016}.  We intend to construct a single network with a recursive structure to refine model predictions.
+
+
+
+\section{Research Question \& Method}
+We want to investigate whether networks will benefit from multi-tasking.  Can sharing weights between tasks reduce overfitting thus enable us to learrn larger networks.  Can cues from one task improve the performance of another? 
+
+The first target will be two tasks, human semantic segmentation and human pose estimation.  We will implement a  single baseline architecture for both human segmentation and pose estimation seperately, assuming a single person in the image. 
+
+Next step is to train the same architecture for both tasks and compare to the individually trained networks.  
+
+The first challenge we face is how to train such a network without data that is both annotated for human segmentation and pose estimation.  An initial approach would be to follow the example of \cite{multitask} and alternate the training task between iterations.  This would allow us to use separate training sets for each task.
+
+Possible extensions to this include the use multiple scales, adding more tasks and including more than one person.
+
+
+\section{Evaluation \& News Value}
+The dataset for Human Pose Estimation task will be the MPII\cite{mpii} and for the Semantic Segmentation we will use Microsoft COCO\cite{Lin2014}.  We will compare the performance of the network to the baseline networks trained individually on their respective test sets.
+
+The news value of this project would be the capacity of a network to multi-task on human related tasks and perhaps the performance improvement on individual tasks due to regularization from the sharing of weights.
+
+\section{Pilot Study}
+The literature study will focus on semantic segmentation and pose estimation using ConvNets as well as object detection and a general survey of the recent advances of neural networks.  Included in the pilot study the student will participate in online tutorials on deep learning and the implementation of the baseline architectures mentioned above.
+
+
+\section{Conditions \& Schedule}
+The experiments will be implemented in TensorFlow\cite{tf} amd run on a GPU provided by CVAP.
+\bibliography{thesis}
+\bibliographystyle{plain}
+
+\end{document}

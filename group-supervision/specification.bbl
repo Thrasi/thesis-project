@@ -1,0 +1,50 @@
+\begin{thebibliography}{1}
+
+\bibitem{Abadi2015}
+Martin Abadi, Ashish Agarwal, Paul Barham, Eugene Brevdo, Zhifeng Chen, Craig
+  Citro, Greg Corrado, Andy Davis, Jeffrey Dean, Matthieu Devin, Sanjay
+  Ghemawat, Ian Goodfellow, Andrew Harp, Geoffrey Irving, Michael Isard,
+  Yangqing Jia, Lukasz Kaiser, Manjunath Kudlur, Josh Levenberg, Dan Man, Rajat
+  Monga, Sherry Moore, Derek Murray, Jon Shlens, Benoit Steiner, Ilya
+  Sutskever, Paul Tucker, Vincent Vanhoucke, Vijay Vasudevan, Oriol Vinyals,
+  Pete Warden, Martin Wicke, Yuan Yu, and Xiaoqiang Zheng.
+\newblock {TensorFlow: Large-Scale Machine Learning on Heterogeneous
+  Distributed Systems}.
+\newblock {\em None}, page~19, 2015.
+
+\bibitem{Andriluka}
+Mykhaylo Andriluka, Leonid Pishchulin, Peter Gehler, Bernt Schiele, and Max
+  Planck.
+\newblock {2D Human Pose Estimation : New Benchmark and State of the Art
+  Analysis : Supplementary Material}.
+
+\bibitem{Lin2014}
+Tsung~Yi Lin, Michael Maire, Serge Belongie, James Hays, Pietro Perona, Deva
+  Ramanan, Piotr Doll{\'{a}}r, and C.~Lawrence Zitnick.
+\newblock {Microsoft COCO: Common objects in context}.
+\newblock {\em Lecture Notes in Computer Science (including subseries Lecture
+  Notes in Artificial Intelligence and Lecture Notes in Bioinformatics)}, 8693
+  LNCS(PART 5):740--755, 2014.
+
+\bibitem{Long2014}
+Jonathan Long, Evan Shelhamer, and Trevor Darrell.
+\newblock {Fully Convolutional Networks for Semantic Segmentation}.
+\newblock {\em 2015 IEEE Conference on Computer Vision and Pattern Recognition
+  (CVPR)}, pages 3431--3440, 2014.
+
+\bibitem{Noh2015}
+Hyeonwoo Noh, Seunghoon Hong, and Bohyung Han.
+\newblock {Learning Deconvolution Network for Semantic Segmentation}.
+\newblock {\em Arvix}, 1:1520--1528, 2015.
+
+\bibitem{Tompson2015}
+Jonathan Tompson, Ross Goroshin, Arjun Jain, Yann Lecun, and Christoph Bregler.
+\newblock {Efficient Object Localization Using Convolutional Networks}.
+\newblock {\em Cvpr}, page 2014, 2015.
+
+\bibitem{Wei2016}
+Shih-En Wei, Varun Ramakrishna, Takeo Kanade, and Yaser Sheikh.
+\newblock {Convolutional Pose Machines}.
+\newblock 2016.
+
+\end{thebibliography}
