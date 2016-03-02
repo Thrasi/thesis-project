@@ -2,7 +2,7 @@
 \usepackage[utf8]{inputenc}
 
 %opening
-\title{Master Thesis Specification \\ Multi-task Human Image Parsing }
+\title{Master Thesis Specification \\ Multi-task Human Image Parsing Using Convolutional Networks}
 \author{Student: Magnus thor Benediktsson, bened@kth.se \\ Supervisor: Hossein Azizpour \\ Examiner Danica Kragic}
 
 \begin{document}
@@ -15,39 +15,71 @@
 
 \section{Background and Objective}
 
-Human detection is central to many computer vision tasks such as surveilance or assisted driving.  Following the success of ConvNets on classification tasks recent work has focused on applying them to pose estimation\cite{Tompson2015}\cite{Wei2016} and semantic segmentation\cite{Long2014},\cite{Noh2015} with state-of-the-art performance.
+Deep Convolutional Networks (ConvNet) have in recent years enjoyed a remarkable success at various vision related tasks such as image classification \cite{He2015,Szegedy2014,Krizhevsky2012}, object detection \cite{Ren2015} and semantic segmentation \cite{Long2014,Noh2015}. Conventionally object detection and localization are approached with Region based Convolutional Networks (R-CNN) \cite{Girshick2014} that use a separate separate algorithm such as Selective Search \cite{Uijlings2013} to generate region proposal within an image upon which the detection ConvNet is applied.  
 
-It is reasonable to expect semantic segmentation of humans and estimation of human joint locations to have similiar features.  The main goal of this thesis will be to train a single multi-task fully convolutional network(FCN)\cite{Long2014}\cite{references in long} for human image parsing such as semantic segmentation and pose estimation. It is interesting to see whether the multi-tasking will benefit the individual tasks.
 
-The sharing of features among various tasks may help regularize the network and dampen overfitting.  This may enable us to learn larger networks.  More tasks that could be incorporated include Human detection, Human Action Recognition etc. There is also an computational efficiency benefit from performing two tasks with a single network as many computations will be shared accross tasks.
+More recently \cite{Ren2015} introduced Region Proposal Network (RPN) that shares a Fully Convolutional Network (FCN) \cite{Long2014} with a a detection network that is able to simultaneously generate region proposals and extract features for classification of those regions.  This method eliminates the need for a separate region proposal algorithm that had become a bottle neck of developing state-of-the-art object detectors \cite{Ren2015}.  Furthermore, the RPN efficiently models the two tasks of object proposal and detection with a single network.
 
-Stat-of-the-art ConvNet pose estimators incorporate multiple network in connected in a cascade like manner  to refine the joint locations\cite{Tompson2015}\cite{Wei2016}.  We intend to construct a single network with a recursive structure to refine model predictions.
+Human detection is central to many computer vision tasks such as surveillance or assisted driving. It is reasonable to expect different human related vision tasks such as human semantic segmentation \cite{Long2014,Noh2015} and joint locations \cite{Tompson2015,Wei2016} to share many cues and features that can be efficiently combined in a single multi-task network solving more than one.  Just as the object detection and region proposals from \cite{Ren2015}.
+
+The main goal of this thesis is to explore the possibility of training a Deep Neural Network that efficiently solves multiple human related tasks.  Training a single network for multiple tasks may affords the network to be trained on more data which may help regularize the network and it can be interesting to compare the performance of a multi-task network to a single-task one or if it can enable us to train larger models.
+
+We will begin by focusing on the tasks of human semantic segmentation and pose estimation and then possibly extend towards human detection and human action recognition.
+
+
+%The sharing of features among various tasks may help regularize the network and dampen overfitting.  This may enable us to learn larger networks.  More tasks that could be incorporated include Human detection, Human Action Recognition etc. There is also an computational efficiency benefit from performing two tasks with a single network as many computations will be shared across tasks.
+
+%Stat-of-the-art ConvNet pose estimators incorporate multiple network in connected in a cascade like manner  to refine the joint locations \cite{Tompson2015,Wei2016}.  We intend to construct a single network with a recursive structure to refine model predictions.
 
 
 
 \section{Research Question \& Method}
-We want to investigate whether networks will benefit from multi-tasking.  Can sharing weights between tasks reduce overfitting thus enable us to learrn larger networks.  Can cues from one task improve the performance of another? 
 
-The first target will be two tasks, human semantic segmentation and human pose estimation.  We will implement a  single baseline architecture for both human segmentation and pose estimation seperately, assuming a single person in the image. 
+Section \label{sec:arc:multi} and its subsections will be the first priority of the thesis.  Depending on the time available we will focus on the later questions which are ordered after priority.
 
-Next step is to train the same architecture for both tasks and compare to the individually trained networks.  
 
-The first challenge we face is how to train such a network without data that is both annotated for human segmentation and pose estimation.  An initial approach would be to follow the example of \cite{multitask} and alternate the training task between iterations.  This would allow us to use separate training sets for each task.
+\subsection{Multi-Task Architecture}
+\label{sec:arc:multi}
+We will investigate architectures for a single baseline network that can be trained to solve two tasks separately.  We will use the architectures of \cite{Long2014,Noh2015} for segmentation and \cite{Tompson2015,Wei2016} for pose estimation as starting points to design our architecture.
 
-Possible extensions to this include the use multiple scales, adding more tasks and including more than one person.
+Next step is to train the architecture on both tasks simultaneously and compare its performance to the individually trained networks.
+
+\subsubsection{Optimization of the Architecture}
+\label{sec:arc:optimization}
+Recent developments of novel architectures have shown to be beneficial to various aspects of ConvNets.  Most notably \cite{He2015,Srivastava2015} have developed methods for optimizing extremely deep networks.  Batch Normalization \cite{Ioffe2015} has been successfully applied to ConvNets to alleviate the problem of covariate shift, it suggests that networks trained with Batch Normalization do not need to apply dropout \cite{Srivastava2014} which has been an important regularization mechanism for DNN's in recent years.  \cite{Szegedy2014,Szegedy2015} have introduced a variety of so called inception modules that break down 2D-convolutions into a set of 1D-convolutions in order to optimize model size.
+
+\subsubsection{Recursive Architecture}
+\label{sec:arc:recursive}
+Stat-of-the-art ConvNet pose estimators incorporate multiple network in connected in a cascade like manner  to refine the joint locations \cite{Tompson2015,Wei2016}.  We intend investigate the possibility of achieving similar behavior with a network with a recursive structure to refine model predictions.  This can be looked first for the single-task trained network and later the multi-task network.
+
+
+\subsection{Regularization}
+\label{sec:reg}
+\subsubsection{Data Augmentation}
+\label{sec:reg:augmentation}
+Training sets are commonly enlarged with label-preserving transformations \cite{Krizhevsky2012}[this should perhaps point towards refs. within Krizhevsky] in order to reduce overfitting. Such transformations include adding random jitter to images, horizontal reflections or image cropping.  Furthermore, we will consider more task specific data augmentation such as warping poses and segmentation masks.
+
+\subsubsection{Combined Training Sets}
+\label{sec:reg:combined}
+As a bi-product of multi-tasking training is that the model has access to more training data which may help battle overfitting.  We want to know if performance of each individual task can be enhanced by training a multi-task network.  
+
+\subsection{Feature Sharing}
+Features learned by by the network for one task may be latent in other tasks.  Connecting diverged parts of the network at later stages may improve performance of individual tasks.  One can reason semantic segmentation can help decrease false positives for landmark estimation by learning general body shapes through mining hard negatives.  Or that human pose estimation can help to increase true positives of semantic segmentation by providing higher level of information about body parts.
 
 
 \section{Evaluation \& News Value}
-The dataset for Human Pose Estimation task will be the MPII\cite{Andriluka} and for the Semantic Segmentation we will use Microsoft COCO\cite{Lin2014}.  We will compare the performance of the network to the baseline networks trained individually on their respective test sets.
+The dataset for the human pose estimation task will be the MPII\cite{Andriluka} and for the semantic segmentation we will use Microsoft COCO\cite{Lin2014}.  We will compare the performance of the network to the baseline networks trained individually on their respective test sets.  
 
-The news value of this project would be the capacity of a network to multi-task on human related tasks and perhaps the performance improvement on individual tasks due to regularization from the sharing of weights.
+The capacity of a network to efficiently model multiple human related tasks is a new value onto itself as it could speedup systems that seek to solve both as demonstrated by \cite{Ren2015}.  Furthermore, if we can realize some of the speculated performance enhancements discussed above.
 
 \section{Pilot Study}
-The literature study will focus on semantic segmentation and pose estimation using ConvNets as well as object detection and a general survey of the recent advances of neural networks.  Included in the pilot study the student will participate in online tutorials on deep learning and the implementation of the baseline architectures mentioned above.
+The literature study will focus on semantic segmentation and pose estimation using ConvNets as well as object detection and a general survey of the recent advances of neural networks.  All cited papers in this will be included.  Specifically the student will familiarize himself with various deep network architectures by reading up on the  most recent developments to facilitate the design of the baseline architecture and further optimizations.
 
+Included in the pilot study the student will participate in online tutorials on deep learning and the implementation of the baseline architectures mentioned above.
 
+ 
 \section{Conditions \& Schedule}
-The experiments will be implemented in TensorFlow\cite{Abadi2015} amd run on a GPU provided by CVAP.
+The experiments will be implemented in TensorFlow\cite{Abadi2015} and run on a GPU provided by CVAP.
 \bibliography{thesis}
 \bibliographystyle{plain}
 

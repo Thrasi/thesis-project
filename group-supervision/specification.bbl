@@ -1,4 +1,4 @@
-\begin{thebibliography}{1}
+\begin{thebibliography}{10}
 
 \bibitem{Abadi2015}
 Martin Abadi, Ashish Agarwal, Paul Barham, Eugene Brevdo, Zhifeng Chen, Craig
@@ -17,6 +17,29 @@ Mykhaylo Andriluka, Leonid Pishchulin, Peter Gehler, Bernt Schiele, and Max
   Planck.
 \newblock {2D Human Pose Estimation : New Benchmark and State of the Art
   Analysis : Supplementary Material}.
+
+\bibitem{Girshick2014}
+Ross Girshick, Jeff Donahue, Trevor Darrell, and Jitendra Malik.
+\newblock {Region-based Convolutional Networks for Accurate Object Detection
+  and Segmentation}.
+\newblock {\em Pami}, 38(1):1--16, 2014.
+
+\bibitem{He2015}
+Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun.
+\newblock {Deep Residual Learning for Image Recognition}.
+\newblock {\em Arxiv.Org}, 7(3):171--180, 2015.
+
+\bibitem{Ioffe2015}
+Sergey Ioffe and Christian Szegedy.
+\newblock {Batch Normalization: Accelerating Deep Network Training by Reducing
+  Internal Covariate Shift}.
+\newblock {\em arXiv}, 2015.
+
+\bibitem{Krizhevsky2012}
+Alex Krizhevsky, IIya Sulskever, and Geoffret~E Hinton.
+\newblock {ImageNet Classification with Deep Convolutional Neural Networks}.
+\newblock {\em Advances in Neural Information and Processing Systems (NIPS)},
+  pages 1--9, 2012.
 
 \bibitem{Lin2014}
 Tsung~Yi Lin, Michael Maire, Serge Belongie, James Hays, Pietro Perona, Deva
@@ -37,10 +60,46 @@ Hyeonwoo Noh, Seunghoon Hong, and Bohyung Han.
 \newblock {Learning Deconvolution Network for Semantic Segmentation}.
 \newblock {\em Arvix}, 1:1520--1528, 2015.
 
+\bibitem{Ren2015}
+Shaoqing Ren, Kaiming He, Ross Girshick, and Jian Sun.
+\newblock {Faster R-CNN: Towards Real-Time Object Detection with Region
+  Proposal Networks}.
+\newblock {\em ArXiv 2015}, pages 1--10, 2015.
+
+\bibitem{Srivastava2014}
+Nitish Srivastava, Geoffrey~E. Hinton, Alex Krizhevsky, Ilya Sutskever, and
+  Ruslan Salakhutdinov.
+\newblock {Dropout : A Simple Way to Prevent Neural Networks from Overfitting}.
+\newblock {\em Journal of Machine Learning Research (JMLR)}, 15:1929--1958,
+  2014.
+
+\bibitem{Srivastava2015}
+Rupesh~Kumar Srivastava, Klaus Greff, and J{\"{u}}rgen Schmidhuber.
+\newblock {Training Very Deep Networks}.
+\newblock {\em arXiv}, pages 1--9, 2015.
+
+\bibitem{Szegedy2014}
+Christian Szegedy, Wei Liu, Yangqing Jia, Pierre Sermanet, Scott Reed, Dragomir
+  Anguelov, Dumitru Erhan, Vincent Vanhoucke, and Andrew Rabinovich.
+\newblock {Going Deeper with Convolutions}.
+\newblock {\em arXiv preprint arXiv:1409.4842}, pages 1--12, 2014.
+
+\bibitem{Szegedy2015}
+Christian Szegedy, Vincent Vanhoucke, Sergey Ioffe, Jonathon Shlens, and
+  Zbigniew Wojna.
+\newblock {Rethinking the Inception Architecture for Computer Vision}.
+\newblock {\em arXiv preprint}, 2015.
+
 \bibitem{Tompson2015}
 Jonathan Tompson, Ross Goroshin, Arjun Jain, Yann Lecun, and Christoph Bregler.
 \newblock {Efficient Object Localization Using Convolutional Networks}.
 \newblock {\em Cvpr}, page 2014, 2015.
+
+\bibitem{Uijlings2013}
+J.~R~R Uijlings, K.~E~A {Van De Sande}, T.~Gevers, and A.~W~M Smeulders.
+\newblock {Selective search for object recognition}.
+\newblock {\em International Journal of Computer Vision}, 104(2):154--171,
+  2013.
 
 \bibitem{Wei2016}
 Shih-En Wei, Varun Ramakrishna, Takeo Kanade, and Yaser Sheikh.

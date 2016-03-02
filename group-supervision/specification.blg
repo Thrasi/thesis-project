@@ -1,55 +1,50 @@
 This is BibTeX, Version 0.99d (TeX Live 2013/Debian)
 Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
 The top-level auxiliary file: specification.aux
-White space in argument---line 7 of file specification.aux
- : \citation{references
- :                      in long}
-I'm skipping whatever remains of this command
 The style file: plain.bst
 Database file #1: thesis.bib
-Warning--I didn't find a database entry for "multitask"
 Warning--empty journal in Andriluka
 Warning--empty year in Andriluka
 Warning--empty journal in Wei2016
-You've used 7 entries,
+You've used 17 entries,
             2118 wiz_defined-function locations,
-            540 strings with 5963 characters,
-and the built_in function-call counts, 3773 in all, are:
-= -- 328
-> -- 331
-< -- 3
-+ -- 131
-- -- 124
-* -- 334
-:= -- 661
-add.period$ -- 20
-call.type$ -- 7
-change.case$ -- 83
+            601 strings with 7873 characters,
+and the built_in function-call counts, 7696 in all, are:
+= -- 709
+> -- 576
+< -- 7
++ -- 227
+- -- 210
+* -- 637
+:= -- 1332
+add.period$ -- 50
+call.type$ -- 17
+change.case$ -- 156
 chr.to.int$ -- 0
-cite$ -- 10
-duplicate$ -- 100
-empty$ -- 171
-format.name$ -- 124
-if$ -- 727
+cite$ -- 20
+duplicate$ -- 228
+empty$ -- 417
+format.name$ -- 210
+if$ -- 1519
 int.to.chr$ -- 0
-int.to.str$ -- 7
-missing$ -- 7
-newline$ -- 37
-num.names$ -- 14
-pop$ -- 87
+int.to.str$ -- 17
+missing$ -- 17
+newline$ -- 87
+num.names$ -- 34
+pop$ -- 152
 preamble$ -- 1
-purify$ -- 76
+purify$ -- 139
 quote$ -- 0
-skip$ -- 79
+skip$ -- 173
 stack$ -- 0
-substring$ -- 143
-swap$ -- 30
-text.length$ -- 3
+substring$ -- 360
+swap$ -- 60
+text.length$ -- 7
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 28
+type$ -- 68
 warning$ -- 3
-while$ -- 23
-width$ -- 8
-write$ -- 73
-(There was 1 error message)
+while$ -- 63
+width$ -- 19
+write$ -- 181
+(There were 3 warnings)
