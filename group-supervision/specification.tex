@@ -15,14 +15,14 @@
 
 \section{Background and Objective}
 
-Deep Convolutional Networks (ConvNet) have in recent years enjoyed a remarkable success at various vision related tasks such as image classification \cite{He2015,Szegedy2014,Krizhevsky2012}, object detection \cite{Ren2015} and semantic segmentation \cite{Long2014,Noh2015}. Conventionally object detection and localization are approached with Region based Convolutional Networks (R-CNN) \cite{Girshick2014} that use a separate separate algorithm such as Selective Search \cite{Uijlings2013} to generate region proposal within an image upon which the detection ConvNet is applied.  
+Deep Convolutional Networks (ConvNet) have in recent years enjoyed a remarkable success at various vision related tasks such as image classification \cite{He2015,Szegedy2014,Krizhevsky2012}, object detection \cite{Ren2015} and semantic segmentation \cite{Long2014,Noh2015}. Conventionally object detection and localization are approached with Region based Convolutional Networks (R-CNN) \cite{Girshick2014} that use a separate algorithm such as Selective Search \cite{Uijlings2013} to generate region proposal within an image upon which the detection ConvNet is applied.  
 
 
-More recently \cite{Ren2015} introduced Region Proposal Network (RPN) that shares a Fully Convolutional Network (FCN) \cite{Long2014} with a a detection network that is able to simultaneously generate region proposals and extract features for classification of those regions.  This method eliminates the need for a separate region proposal algorithm that had become a bottle neck of developing state-of-the-art object detectors \cite{Ren2015}.  Furthermore, the RPN efficiently models the two tasks of object proposal and detection with a single network.
+More recently \cite{Ren2015} introduced Region Proposal Network (RPN) that shares a Fully Convolutional Network (FCN) \cite{Long2014} with a detection network that is able to simultaneously generate region proposals and extract features for classification of those regions.  This method eliminates the need for a separate region proposal algorithm that had become a bottle neck of developing state-of-the-art object detectors \cite{Ren2015}.  Furthermore, the RPN efficiently models the two tasks of object proposal and detection with a single network.
 
-Human detection is central to many computer vision tasks such as surveillance or assisted driving. It is reasonable to expect different human related vision tasks such as human semantic segmentation \cite{Long2014,Noh2015} and joint locations \cite{Tompson2015,Wei2016} to share many cues and features that can be efficiently combined in a single multi-task network solving more than one.  Just as the object detection and region proposals from \cite{Ren2015}.
+Human detection is central to many computer vision tasks such as surveillance or assisted driving. It is reasonable to expect different human related vision tasks such as human semantic segmentation \cite{Long2014,Noh2015} and joint locations \cite{Tompson2015,Wei2016} to share many cues and features that can be efficiently combined in a single multi-task network solving more than one task simultaneously.  Just as the object detection and region proposals from \cite{Ren2015}.
 
-The main goal of this thesis is to explore the possibility of training a Deep Neural Network that efficiently solves multiple human related tasks.  Training a single network for multiple tasks may affords the network to be trained on more data which may help regularize the network and it can be interesting to compare the performance of a multi-task network to a single-task one or if it can enable us to train larger models.
+The main goal of this thesis is to explore the possibility of training a Deep Neural Network (DNN) that efficiently solves multiple human related tasks.  Training a single network for multiple tasks will afford the network to be trained on more data which may help regularize the network and it can be interesting to compare the performance of a multi-task network to a single-task one or see if it enables the training of larger models.
 
 We will begin by focusing on the tasks of human semantic segmentation and pose estimation and then possibly extend towards human detection and human action recognition.
 
@@ -35,7 +35,7 @@ We will begin by focusing on the tasks of human semantic segmentation and pose e
 
 \section{Research Question \& Method}
 
-Section \label{sec:arc:multi} and its subsections will be the first priority of the thesis.  Depending on the time available we will focus on the later questions which are ordered after priority.
+Section \ref{sec:arc:multi} and its subsections will be the first priority of the thesis.  Depending on the time available we will focus on the later questions which are in order of priority.
 
 
 \subsection{Multi-Task Architecture}
@@ -46,36 +46,38 @@ Next step is to train the architecture on both tasks simultaneously and compare 
 
 \subsubsection{Optimization of the Architecture}
 \label{sec:arc:optimization}
-Recent developments of novel architectures have shown to be beneficial to various aspects of ConvNets.  Most notably \cite{He2015,Srivastava2015} have developed methods for optimizing extremely deep networks.  Batch Normalization \cite{Ioffe2015} has been successfully applied to ConvNets to alleviate the problem of covariate shift, it suggests that networks trained with Batch Normalization do not need to apply dropout \cite{Srivastava2014} which has been an important regularization mechanism for DNN's in recent years.  \cite{Szegedy2014,Szegedy2015} have introduced a variety of so called inception modules that break down 2D-convolutions into a set of 1D-convolutions in order to optimize model size.
+Recent developments of novel architectures have proven beneficial to various aspects of ConvNets.  Most notably \cite{He2015,Srivastava2015} have developed methods for optimizing extremely deep networks.  Batch Normalization \cite{Ioffe2015} has been successfully applied to ConvNets to alleviate the problem of covariate shift in input data, it suggests that networks trained with Batch Normalization do not need to apply dropout \cite{Srivastava2014} which has been an important regularization mechanism for DNN's in recent years.  This is further supported by \cite{He2015}.  \cite{Szegedy2014,Szegedy2015} have introduced a variety of so called inception modules that break down 2D-convolutions into a set of 1D-convolutions in order to optimize model size.
+
+These and possibly more will be considered for improving performance of our baseline architecture.
 
 \subsubsection{Recursive Architecture}
 \label{sec:arc:recursive}
-Stat-of-the-art ConvNet pose estimators incorporate multiple network in connected in a cascade like manner  to refine the joint locations \cite{Tompson2015,Wei2016}.  We intend investigate the possibility of achieving similar behavior with a network with a recursive structure to refine model predictions.  This can be looked first for the single-task trained network and later the multi-task network.
+Stat-of-the-art ConvNet pose estimators often incorporate multiple network in connected in a cascade like manner  to refine the joint locations \cite{Tompson2015,Wei2016}.  We intend investigate the possibility of achieving similar behavior on a network with a recursive structure to refine model predictions.  This can first be considered for the single-task trained network and later the multi-task network.
 
 
 \subsection{Regularization}
 \label{sec:reg}
 \subsubsection{Data Augmentation}
 \label{sec:reg:augmentation}
-Training sets are commonly enlarged with label-preserving transformations \cite{Krizhevsky2012}[this should perhaps point towards refs. within Krizhevsky] in order to reduce overfitting. Such transformations include adding random jitter to images, horizontal reflections or image cropping.  Furthermore, we will consider more task specific data augmentation such as warping poses and segmentation masks.
+Training sets are commonly enlarged with label-preserving transformations \cite{Krizhevsky2012}[this should perhaps point towards refs. within Krizhevsky] in order to reduce overfitting. Such transformations include adding random jitter to images, horizontal reflections and image cropping.  Furthermore, we will consider more task specific data augmentation such as warping poses and segmentation masks.
 
 \subsubsection{Combined Training Sets}
 \label{sec:reg:combined}
 As a bi-product of multi-tasking training is that the model has access to more training data which may help battle overfitting.  We want to know if performance of each individual task can be enhanced by training a multi-task network.  
 
 \subsection{Feature Sharing}
-Features learned by by the network for one task may be latent in other tasks.  Connecting diverged parts of the network at later stages may improve performance of individual tasks.  One can reason semantic segmentation can help decrease false positives for landmark estimation by learning general body shapes through mining hard negatives.  Or that human pose estimation can help to increase true positives of semantic segmentation by providing higher level of information about body parts.
+Features learned by the network for one task may be latent in other tasks.  Connecting diverged parts of the network at later stages may improve performance of individual tasks.  One can reason semantic segmentation can help decrease false positives for landmark estimation by learning general body shapes through mining hard negatives.  Or that human pose estimation can help to increase true positives of semantic segmentation by providing higher level of information about body parts.
 
 
 \section{Evaluation \& News Value}
 The dataset for the human pose estimation task will be the MPII\cite{Andriluka} and for the semantic segmentation we will use Microsoft COCO\cite{Lin2014}.  We will compare the performance of the network to the baseline networks trained individually on their respective test sets.  
 
-The capacity of a network to efficiently model multiple human related tasks is a new value onto itself as it could speedup systems that seek to solve both as demonstrated by \cite{Ren2015}.  Furthermore, if we can realize some of the speculated performance enhancements discussed above.
+The capacity of a network to efficiently model multiple human related tasks is a new value onto itself as it can speedup systems that seek to solve both as demonstrated by \cite{Ren2015}.  Furthermore, the realization of some of the speculated performance enhancements discussed above would be extremely valuable.
 
 \section{Pilot Study}
-The literature study will focus on semantic segmentation and pose estimation using ConvNets as well as object detection and a general survey of the recent advances of neural networks.  All cited papers in this will be included.  Specifically the student will familiarize himself with various deep network architectures by reading up on the  most recent developments to facilitate the design of the baseline architecture and further optimizations.
+The literature study will focus on semantic segmentation and pose estimation using ConvNets as well as object detection and a general survey of the recent advances of neural networks.  All cited papers in this document will be included.  Specifically the student will familiarize himself with various deep network architectures by reading up on the  most recent developments.  This is important in order to facilitate the design of the baseline architecture and further optimizations.
 
-Included in the pilot study the student will participate in online tutorials on deep learning and the implementation of the baseline architectures mentioned above.
+Included in the pilot study is the student participation in online tutorials on deep learning and the implementation of the baseline architectures mentioned above.
 
  
 \section{Conditions \& Schedule}
