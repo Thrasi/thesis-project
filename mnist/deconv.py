@@ -32,6 +32,9 @@ import numpy
 from six.moves import urllib
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
+import matplotlib.pyplot as plt
+
+import helpers
 
 SOURCE_URL = 'http://yann.lecun.com/exdb/mnist/'
 WORK_DIRECTORY = 'data'
@@ -45,7 +48,7 @@ BATCH_SIZE = 64
 NUM_EPOCHS = 10
 EVAL_BATCH_SIZE = 64
 EVAL_FREQUENCY = 100  # Number of steps between evaluations.
-
+DECAY_RATE = 5e-4
 
 tf.app.flags.DEFINE_boolean("self_test", False, "True if running a self test.")
 FLAGS = tf.app.flags.FLAGS
@@ -107,10 +110,28 @@ def fake_data(num_images):
 
 def error_rate(predictions, labels):
   """Return the error rate based on dense predictions and sparse labels."""
+  reshaped_labels = labels.reshape([labels.shape[0]
+                                    *labels.shape[1]
+                                    *labels.shape[2]])
+  # plt.subplot(1,2,1)
+  # plt.imshow(predictions[0:IMAGE_SIZE*IMAGE_SIZE,1].reshape([IMAGE_SIZE,IMAGE_SIZE]))
+  # plt.subplot(1,2,2)
+  # plt.imshow(reshaped_labels[0:IMAGE_SIZE*IMAGE_SIZE].reshape([IMAGE_SIZE,IMAGE_SIZE]))
+  # plt.show()
+  print("sum of class 1 pred: " +str(numpy.sum(numpy.argmax(predictions, 1)==1)))
+  print("sum of class 0 pred: " +str(numpy.sum(numpy.argmax(predictions, 1)==0)))
+
+  print("avg sum of class 1 pred per image: " +str(numpy.sum(numpy.argmax(predictions, 1)==1)/64.))
+  print("avg sum of class 0 pred per image: " +str(numpy.sum(numpy.argmax(predictions, 1)==0)/64.))
+  print("sum of class 1: " +str(numpy.sum(labels==1)))
+  print("sum of class 0: " +str(numpy.sum(labels==0)))
+  print("avg sum of class 1 per image: " +str(numpy.sum(labels==1)/64.))
+  print("avg sum of class 0 per image: " +str(numpy.sum(labels==0)/64.))
+
   return 100.0 - (
       100.0 *
-      numpy.sum(numpy.argmax(predictions, 1) == labels) /
-      predictions.shape[0])
+      numpy.sum(numpy.argmax(predictions, 1) == reshaped_labels) /
+      numpy.float32(predictions.shape[0]))
 
 
 def main(argv=None):  # pylint: disable=unused-argument
@@ -148,59 +169,14 @@ def main(argv=None):  # pylint: disable=unused-argument
       tf.float32,
       shape=(BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, NUM_CHANNELS))
   train_labels_node = tf.placeholder(
-      tf.float32,
+      tf.int64,
       shape=(BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, NUM_CHANNELS))
   eval_data = tf.placeholder(
       tf.float32,
       shape=(EVAL_BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, NUM_CHANNELS))
 
-  # The variables below hold all the trainable weights. They are passed an
-  # initial value which will be assigned when when we call:
-  # {tf.initialize_all_variables().run()}
-  conv1_weights = tf.Variable(
-    tf.truncated_normal([5, 5, NUM_CHANNELS, 32],  # 5x5 filter, depth 32.
-                        stddev=0.1,
-                        seed=SEED))
-  conv1_biases = tf.Variable(tf.zeros([32]))
-
-  conv2_weights = tf.Variable(
-    tf.truncated_normal([5, 5, 32, 64],
-                        stddev=0.1,
-                        seed=SEED))
-  conv2_biases = tf.Variable(tf.constant(0.1, shape=[64]))
-
-  conv3_weights = tf.Variable(
-    tf.truncated_normal([3, 3, 64, 512],
-                        stddev=0.1,
-                        seed=SEED))
-  conv3_biases = tf.Variable(tf.constant(0.1, shape=[512]))
-
-  conv4_weights = tf.Variable(
-    tf.truncated_normal([1, 1, 512, 64],
-                        stddev=0.1,
-                        seed=SEED))
-  conv4_biases = tf.Variable(tf.constant(0.1, shape=[64]))
-  
-  deconv1_weights = tf.Variable(
-    tf.truncated_normal([5, 5, 64, 32],
-                        stddev=0.1,
-                        seed=SEED))
-  deconv1_biases = tf.Variable(tf.constant(0.1, shape=[32]))
-
-  deconv2_weights = tf.Variable(
-    tf.truncated_normal([5, 5, 32, 2],
-                        stddev=0.1,
-                        seed=SEED))
-  deconv2_biases = tf.Variable(tf.constant(0.1, shape=[1]))
-
   # We will replicate the model structure for the training subgraph, as well
   # as the evaluation subgraphs, while sharing the trainable parameters.
-  def conv2dRelu(data, weights, biases, padding='SAME'):
-    conv = tf.nn.conv2d(data,
-                        weights,
-                        strides=[1,1,1,1],
-                        padding=padding)
-    return tf.nn.relu(tf.nn.bias_add(conv, biases))
   
   def model(data, train=False):
     """The Model definition."""
@@ -209,116 +185,117 @@ def main(argv=None):  # pylint: disable=unused-argument
     # shape matches the data layout: [image index, y, x, depth].
 
     # 28x28
-    conv = tf.nn.conv2d(data,
-                        conv1_weights,
-                        strides=[1, 1, 1, 1],
-                        padding='SAME')
-    # Bias and rectified linear non-linearity.
-    relu = tf.nn.relu(tf.nn.bias_add(conv, conv1_biases))
-    relu = conv2d(data, conv1_weights, conv1_biases)
-    print("After first conv: "+str(relu.get_shape()))
+    conv = helpers.conv2d(data,
+                          name="conv1",
+                          kernel_width=5,
+                          num_filters=32,
+                          transfer=tf.nn.relu,
+                          decay_rate=DECAY_RATE)
+    print("After first conv: "+str(conv.get_shape()))
     # Max pooling. The kernel size spec {ksize} also follows the layout of
     # the data. Here we have a pooling window of 2, and a stride of 2.
-    pool = tf.nn.max_pool(relu,
-                          ksize=[1, 2, 2, 1],
-                          strides=[1, 2, 2, 1],
-                          padding='SAME')
+    pool = helpers.pool(conv, 
+                        name="pool1", 
+                        kernel_width=2)
     print("After first pool: "+str(pool.get_shape()))
 #    print("After first conv: "+str(relu.get_shape())
     # 14x14
-    conv = tf.nn.conv2d(pool,
-                        conv2_weights,
-                        strides=[1, 1, 1, 1],
-                        padding='SAME')
-    relu = tf.nn.relu(tf.nn.bias_add(conv, conv2_biases))
-    print("After second conv: "+str(relu.get_shape()))
-    pool = tf.nn.max_pool(relu,
-                          ksize=[1, 2, 2, 1],
-                          strides=[1, 2, 2, 1],
-                          padding='SAME')
-    print("After second pool: "+str(pool.get_shape()))
-    OUTPUT_SHAPE = pool.get_shape() 
-    # 7x7
-    conv = tf.nn.conv2d(pool,
-                        conv3_weights,
-                        strides=[1, 1, 1, 1],
-                        padding='VALID')
-    relu = tf.nn.relu(tf.nn.bias_add(conv, conv3_biases))
-    print("After third conv: "+str(relu.get_shape()))
-    conv = tf.nn.conv2d(relu,
-                        conv4_weights,
-                        strides=[1, 1, 1, 1],
-                        padding='SAME')
-    relu = tf.nn.relu(tf.nn.bias_add(conv, conv4_biases))
+    conv = helpers.conv2d(pool,
+                          name="conv2",
+                          kernel_width=5,
+                          num_filters=64,
+                          transfer=tf.nn.relu,
+                          decay_rate=DECAY_RATE)
+    # print("After second conv: "+str(conv.get_shape()))
+    # pool = helpers.pool(conv,
+    #                     name="pool2",
+    #                     kernel_width=2)
+    # print("After second pool: "+str(pool.get_shape()))
+    # # 7x7
+    # conv = helpers.conv2d(pool,
+    #                       name="conv3",
+    #                       kernel_width=3,
+    #                       num_filters=512,
+    #                       transfer=tf.nn.relu,
+    #                       padding='VALID',
+    #                       decay_rate=DECAY_RATE)
+    # print("After third conv: "+str(conv.get_shape()))
+    # conv = helpers.conv2d(conv,
+    #                       name="1x1",
+    #                       kernel_width=1,
+    #                       num_filters=512,
+    #                       transfer=tf.nn.relu,
+    #                       decay_rate=DECAY_RATE)
     if train:
-      relu = tf.nn.dropout(relu, 0.5, seed=SEED)
-          # 1x1
-    print("After 1x1 conv: "+str(relu.get_shape()))
-    conv = tf.nn.conv2d(relu,
-                        deconv1_weights,
-                        strides=[1, 1, 1, 1],
-                        padding='SAME',
-                        name=None)
-    relu = tf.nn.relu(tf.nn.bias_add(conv, deconv1_biases))
-    
-    print("After first deconv: "+str(relu.get_shape()))
-    # 7x7 ?
-    size = tf.constant([14, 14])
-    unpool = tf.image.resize_bilinear(relu, size, align_corners=None, name=None)
-    print("After first unpool: "+str(unpool.get_shape()))
-    # 14x14
-    conv = tf.nn.conv2d(unpool,
-                        deconv2_weights,
-                        strides=[1, 1, 1, 1],
-                        padding='SAME')
-    relu = tf.nn.relu(tf.nn.bias_add(conv, deconv2_biases))
-    print("After second deconv: "+str(relu.get_shape()))
+      conv = tf.nn.dropout(conv, 0.5, seed=SEED)
+    # 5x5
+    print("After 1x1 conv: "+str(conv.get_shape()))
+    # size = tf.constant([7, 7])
+    # unpool = tf.image.resize_nearest_neighbor(conv,
+    #                                   size,
+    #                                   align_corners=None, 
+    #                                   name="unpool1")
+    # print("After first unpool: "+str(unpool.get_shape()))
+    # # 7x7
+    # conv = helpers.conv2d(unpool,
+    #                       name="deconv1",
+    #                       kernel_width=3,
+    #                       num_filters=64,
+    #                       transfer=tf.nn.relu,
+    #                       decay_rate=DECAY_RATE)
+    # print("After first deconv: "+str(conv.get_shape()))
+    # # 7x7 
+    # size = tf.constant([14, 14])
+    # unpool = tf.image.resize_nearest_neighbor(conv,
+    #                                   size, 
+    #                                   align_corners=None, 
+    #                                   name="unpool2")
+    # print("After second unpool: "+str(unpool.get_shape()))
+    # # 14x14
+    # conv = helpers.conv2d(unpool,
+    #                       name="deconv2",
+    #                       kernel_width=3,
+    #                       num_filters=32,
+    #                       transfer=tf.nn.relu,
+    #                       decay_rate=DECAY_RATE)
+    # print("After second deconv: "+str(conv.get_shape()))
     size = tf.constant([28, 28])
-    unpool = tf.image.resize_bilinear(relu, size, align_corners=None, name=None)
-    print("After second unpool: "+str(unpool.get_shape()))
-
-    conv = tf.nn.conv2d(unpool,
-                        deconv3_weights,
-                        strides=[1, 1, 1, 1],
-                        padding='SAME')
+    unpool = tf.image.resize_nearest_neighbor(conv, 
+                                      size, 
+                                      align_corners=None, 
+                                      name="unpool3")
+    print("After third unpool: "+str(unpool.get_shape()))
+    conv = helpers.conv2d(unpool,
+                          name="deconv3",
+                          kernel_width=3,
+                          num_filters=2,
+                          transfer=tf.nn.relu,
+                          decay_rate=DECAY_RATE)
     print("After third deconv: "+str(conv.get_shape()))
-    conv = conv + deconv3_biases
-    print("After adding biases: "+str(conv.get_shape()))
     conv_shape = conv.get_shape().as_list()
 #    reshape = tf.reshape(conv,
 #                     [conv_shape[0],conv_shape[1]*conv_shape[2]*conv_shape[3]])
-    return conv
+    reshape = tf.reshape(conv,
+                      [conv_shape[0]*conv_shape[1]*conv_shape[2],
+                               conv_shape[3]])
+    return reshape
 
   # Training computation: logits + cross-entropy loss.
   logits = model(train_data_node, True)
-#  loss = tf.sub(logits, train_labels_node)
-  #print(train_labels_node)
-#  shape=train_labels_node.get_shape().as_list()
-#  reshape = tf.reshape(train_labels_node,
-#                     [shape[0],shape[1]*shape[2]*shape[3]])
-#  reshape = train_labels_node
+
   print(logits)
-#  print(reshape)
   print(train_labels_node)
-#  loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
-#      logits, reshape))
-  logit_shape = logits.get_shape().as_list()
-  reshaped_logits = tf.reshape(logits,
-                              [logit_shape[0]*logit_shape[1]*logit_shape[2],
-                               logit_shape[3]])
+  # logit_shape = logits.get_shape().as_list()
+  # reshaped_logits = tf.reshape(logits,
+  #                             [logit_shape[0]*logit_shape[1]*logit_shape[2],
+  #                              logit_shape[3]])
+  print(logits.get_shape())
   label_shape = train_labels_node.get_shape().as_list()
   reshaped_labels = tf.reshape(train_labels_node,
-                              label_shape[0]*label_shape[1]*label_shape[2],
-                              label_shape[3])
+                              [label_shape[0]*label_shape[1]*label_shape[2]])
+  print(reshaped_labels.get_shape())
   loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
-    reshaped_logits, reshaped_labels))
-
-  # L2 regularization for the fully connected parameters.
-  regularizers = (tf.nn.l2_loss(conv3_weights) + tf.nn.l2_loss(conv3_biases) +
-                  tf.nn.l2_loss(conv4_weights) + tf.nn.l2_loss(conv4_biases) +
-                  tf.nn.l2_loss(deconv1_weights) + tf.nn.l2_loss(deconv1_biases))
-  # Add the regularization term to the loss.
-  loss += 5e-4 * regularizers
+                        logits, reshaped_labels))
 
   # Optimizer: set up a variable that's incremented once per batch and
   # controls the learning rate decay.
@@ -340,7 +317,7 @@ def main(argv=None):  # pylint: disable=unused-argument
   #  train_prediction = tf.nn.softmax(logits)
 
   # Predictions for the test and validation, which we'll compute less often.
-  eval_prediction = model(eval_data)
+#  eval_prediction = model(eval_data)
 
   # Small utility function to evaluate a dataset by feeding batches of data to
   # {eval_data} and pulling the results from {eval_predictions}.
@@ -386,6 +363,8 @@ def main(argv=None):  # pylint: disable=unused-argument
       _, l, lr, predictions = sess.run(
           [optimizer, loss, learning_rate, train_prediction],
           feed_dict=feed_dict)
+      # print(predictions.shape)
+      # print(batch_labels.shape)
       if step % EVAL_FREQUENCY == 0:
         elapsed_time = time.time() - start_time
         start_time = time.time()
@@ -394,8 +373,8 @@ def main(argv=None):  # pylint: disable=unused-argument
                1000 * elapsed_time / EVAL_FREQUENCY))
         print('Minibatch loss: %.3f, learning rate: %.6f' % (l, lr))
         print('Minibatch error: %.1f%%' % error_rate(predictions, batch_labels))
-        print('Validation error: %.1f%%' % error_rate(
-            eval_in_batches(validation_data, sess), validation_labels))
+#        print('Validation error: %.1f%%' % error_rate(
+#            eval_in_batches(validation_data, sess), validation_labels))
         sys.stdout.flush()
 #        save_path = saver.save(sess, "modelMnist.ckpt")
 #        print('Model saved in file: %s' % save_path)
