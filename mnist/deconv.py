@@ -170,37 +170,38 @@ def main(argv=None):  # pylint: disable=unused-argument
   conv2_biases = tf.Variable(tf.constant(0.1, shape=[64]))
 
   conv3_weights = tf.Variable(
-    tf.truncated_normal([7, 7, 64, 512],
+    tf.truncated_normal([3, 3, 64, 512],
                         stddev=0.1,
                         seed=SEED))
   conv3_biases = tf.Variable(tf.constant(0.1, shape=[512]))
 
   conv4_weights = tf.Variable(
-    tf.truncated_normal([1, 1, 512, 512],
+    tf.truncated_normal([1, 1, 512, 64],
                         stddev=0.1,
                         seed=SEED))
-  conv4_biases = tf.Variable(tf.constant(0.1, shape=[512]))
+  conv4_biases = tf.Variable(tf.constant(0.1, shape=[64]))
   
   deconv1_weights = tf.Variable(
-    tf.truncated_normal([7, 7, 64, 512],
-                        stddev=0.1,
-                        seed=SEED))
-  deconv1_biases = tf.Variable(tf.constant(0.1, shape=[64]))
-
-  deconv2_weights = tf.Variable(
     tf.truncated_normal([5, 5, 64, 32],
                         stddev=0.1,
                         seed=SEED))
-  deconv2_biases = tf.Variable(tf.constant(0.1, shape=[32]))
+  deconv1_biases = tf.Variable(tf.constant(0.1, shape=[32]))
 
-  deconv3_weights = tf.Variable(
+  deconv2_weights = tf.Variable(
     tf.truncated_normal([5, 5, 32, 2],
                         stddev=0.1,
                         seed=SEED))
-  deconv3_biases = tf.Variable(tf.constant(0.1, shape=[1]))
+  deconv2_biases = tf.Variable(tf.constant(0.1, shape=[1]))
 
   # We will replicate the model structure for the training subgraph, as well
   # as the evaluation subgraphs, while sharing the trainable parameters.
+  def conv2dRelu(data, weights, biases, padding='SAME'):
+    conv = tf.nn.conv2d(data,
+                        weights,
+                        strides=[1,1,1,1],
+                        padding=padding)
+    return tf.nn.relu(tf.nn.bias_add(conv, biases))
+  
   def model(data, train=False):
     """The Model definition."""
     # 2D convolution, with 'SAME' padding (i.e. the output feature map has
@@ -214,6 +215,7 @@ def main(argv=None):  # pylint: disable=unused-argument
                         padding='SAME')
     # Bias and rectified linear non-linearity.
     relu = tf.nn.relu(tf.nn.bias_add(conv, conv1_biases))
+    relu = conv2d(data, conv1_weights, conv1_biases)
     print("After first conv: "+str(relu.get_shape()))
     # Max pooling. The kernel size spec {ksize} also follows the layout of
     # the data. Here we have a pooling window of 2, and a stride of 2.
@@ -252,12 +254,11 @@ def main(argv=None):  # pylint: disable=unused-argument
       relu = tf.nn.dropout(relu, 0.5, seed=SEED)
           # 1x1
     print("After 1x1 conv: "+str(relu.get_shape()))
-    conv = tf.nn.conv2d_transpose(relu,
-                                    deconv1_weights,
-                                    OUTPUT_SHAPE,
-                                    strides=[1, 1, 1, 1],
-                                    padding='SAME',
-                                    name=None)
+    conv = tf.nn.conv2d(relu,
+                        deconv1_weights,
+                        strides=[1, 1, 1, 1],
+                        padding='SAME',
+                        name=None)
     relu = tf.nn.relu(tf.nn.bias_add(conv, deconv1_biases))
     
     print("After first deconv: "+str(relu.get_shape()))
