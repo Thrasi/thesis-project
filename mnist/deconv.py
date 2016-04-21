@@ -89,7 +89,7 @@ def extract_masks(filename, num_images):
     bytestream.read(16)
     buf = bytestream.read(IMAGE_SIZE * IMAGE_SIZE * num_images)
     data = numpy.frombuffer(buf, dtype=numpy.uint8).astype(numpy.float32)
-    data = (data / numpy.float32(PIXEL_DEPTH)) > 0.85
+    data = (data / numpy.float32(PIXEL_DEPTH)) > 0.75
     data = data.reshape(num_images, IMAGE_SIZE, IMAGE_SIZE, 1)
     return data#.astype(numpy.int64)
 
@@ -113,10 +113,16 @@ def error_rate(predictions, labels):
   reshaped_labels = labels.reshape([labels.shape[0]
                                     *labels.shape[1]
                                     *labels.shape[2]])
-  # plt.subplot(1,2,1)
-  # plt.imshow(predictions[0:IMAGE_SIZE*IMAGE_SIZE,1].reshape([IMAGE_SIZE,IMAGE_SIZE]))
-  # plt.subplot(1,2,2)
-  # plt.imshow(reshaped_labels[0:IMAGE_SIZE*IMAGE_SIZE].reshape([IMAGE_SIZE,IMAGE_SIZE]))
+
+  # for i in range(5):
+  #   plt.subplot(2,5,1+i)
+  #   nr_pixel = IMAGE_SIZE*IMAGE_SIZE
+  #   digit = predictions[i*nr_pixel:i*nr_pixel+nr_pixel,1]
+  #   non_digit = predictions[i*nr_pixel:i*nr_pixel+nr_pixel,0]
+  #   im = (digit - non_digit) > 0
+  #   plt.imshow(im.reshape([IMAGE_SIZE,IMAGE_SIZE]))
+  #   plt.subplot(2,5,6+i)
+  #   plt.imshow(reshaped_labels[i*nr_pixel:i*nr_pixel+nr_pixel].reshape([IMAGE_SIZE,IMAGE_SIZE]))
   # plt.show()
   print("sum of class 1 pred: " +str(numpy.sum(numpy.argmax(predictions, 1)==1)))
   print("sum of class 0 pred: " +str(numpy.sum(numpy.argmax(predictions, 1)==0)))
@@ -206,20 +212,20 @@ def main(argv=None):  # pylint: disable=unused-argument
                           num_filters=64,
                           transfer=tf.nn.relu,
                           decay_rate=DECAY_RATE)
-    # print("After second conv: "+str(conv.get_shape()))
-    # pool = helpers.pool(conv,
-    #                     name="pool2",
-    #                     kernel_width=2)
-    # print("After second pool: "+str(pool.get_shape()))
-    # # 7x7
-    # conv = helpers.conv2d(pool,
-    #                       name="conv3",
-    #                       kernel_width=3,
-    #                       num_filters=512,
-    #                       transfer=tf.nn.relu,
-    #                       padding='VALID',
-    #                       decay_rate=DECAY_RATE)
-    # print("After third conv: "+str(conv.get_shape()))
+    print("After second conv: "+str(conv.get_shape()))
+    pool = helpers.pool(conv,
+                        name="pool2",
+                        kernel_width=2)
+    print("After second pool: "+str(pool.get_shape()))
+    # 7x7
+    conv = helpers.conv2d(pool,
+                          name="conv3",
+                          kernel_width=3,
+                          num_filters=64,
+                          transfer=tf.nn.relu,
+                          padding='SAME',
+                          decay_rate=DECAY_RATE)
+    print("After third conv: "+str(conv.get_shape()))
     # conv = helpers.conv2d(conv,
     #                       name="1x1",
     #                       kernel_width=1,
@@ -245,20 +251,20 @@ def main(argv=None):  # pylint: disable=unused-argument
     #                       decay_rate=DECAY_RATE)
     # print("After first deconv: "+str(conv.get_shape()))
     # # 7x7 
-    # size = tf.constant([14, 14])
-    # unpool = tf.image.resize_nearest_neighbor(conv,
-    #                                   size, 
-    #                                   align_corners=None, 
-    #                                   name="unpool2")
-    # print("After second unpool: "+str(unpool.get_shape()))
-    # # 14x14
-    # conv = helpers.conv2d(unpool,
-    #                       name="deconv2",
-    #                       kernel_width=3,
-    #                       num_filters=32,
-    #                       transfer=tf.nn.relu,
-    #                       decay_rate=DECAY_RATE)
-    # print("After second deconv: "+str(conv.get_shape()))
+    size = tf.constant([14, 14])
+    unpool = tf.image.resize_nearest_neighbor(conv,
+                                      size, 
+                                      align_corners=None, 
+                                      name="unpool2")
+    print("After second unpool: "+str(unpool.get_shape()))
+    # 14x14
+    conv = helpers.conv2d(unpool,
+                          name="deconv2",
+                          kernel_width=3,
+                          num_filters=32,
+                          transfer=tf.nn.relu,
+                          decay_rate=DECAY_RATE)
+    print("After second deconv: "+str(conv.get_shape()))
     size = tf.constant([28, 28])
     unpool = tf.image.resize_nearest_neighbor(conv, 
                                       size, 
@@ -302,10 +308,10 @@ def main(argv=None):  # pylint: disable=unused-argument
   batch = tf.Variable(0)
   # Decay once per epoch, using an exponential schedule starting at 0.01.
   learning_rate = tf.train.exponential_decay(
-      0.01,                # Base learning rate.
+      0.001,                # Base learning rate.
       batch * BATCH_SIZE,  # Current index into the dataset.
       train_size,          # Decay step.
-      0.95,                # Decay rate.
+      0.85,                # Decay rate.
       staircase=True)
   # Use simple momentum for the optimization.
   optimizer = tf.train.MomentumOptimizer(learning_rate,
