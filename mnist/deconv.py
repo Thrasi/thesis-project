@@ -41,7 +41,7 @@ WORK_DIRECTORY = 'data'
 IMAGE_SIZE = 28
 NUM_CHANNELS = 1
 PIXEL_DEPTH = 255
-NUM_LABELS = 10
+NUM_LABELS = 2
 VALIDATION_SIZE = 5000  # Size of the validation set.
 SEED = 66478  # Set to None for random seed.
 BATCH_SIZE = 64
@@ -89,7 +89,7 @@ def extract_masks(filename, num_images):
     bytestream.read(16)
     buf = bytestream.read(IMAGE_SIZE * IMAGE_SIZE * num_images)
     data = numpy.frombuffer(buf, dtype=numpy.uint8).astype(numpy.float32)
-    data = (data / numpy.float32(PIXEL_DEPTH)) > 0.75
+    data = (data / numpy.float32(PIXEL_DEPTH)) > 0.85
     data = data.reshape(num_images, IMAGE_SIZE, IMAGE_SIZE, 1)
     return data#.astype(numpy.int64)
 
@@ -108,22 +108,25 @@ def fake_data(num_images):
   return data, labels
 
 
-def error_rate(predictions, labels):
+def error_rate(predictions, labels, input_data):
   """Return the error rate based on dense predictions and sparse labels."""
   reshaped_labels = labels.reshape([labels.shape[0]
                                     *labels.shape[1]
                                     *labels.shape[2]])
 
-  # for i in range(5):
-  #   plt.subplot(2,5,1+i)
-  #   nr_pixel = IMAGE_SIZE*IMAGE_SIZE
-  #   digit = predictions[i*nr_pixel:i*nr_pixel+nr_pixel,1]
-  #   non_digit = predictions[i*nr_pixel:i*nr_pixel+nr_pixel,0]
-  #   im = (digit - non_digit) > 0
-  #   plt.imshow(im.reshape([IMAGE_SIZE,IMAGE_SIZE]))
-  #   plt.subplot(2,5,6+i)
-  #   plt.imshow(reshaped_labels[i*nr_pixel:i*nr_pixel+nr_pixel].reshape([IMAGE_SIZE,IMAGE_SIZE]))
-  # plt.show()
+  for i in range(5):
+    plt.subplot(3,5,1+i)
+    plt.imshow(input_data[i,:,:,0])  
+    plt.subplot(3,5,6+i)
+    nr_pixel = IMAGE_SIZE*IMAGE_SIZE
+    digit = predictions[i*nr_pixel:i*nr_pixel+nr_pixel,1]
+    non_digit = predictions[i*nr_pixel:i*nr_pixel+nr_pixel,0]
+    im = (digit - non_digit) > 0
+    plt.imshow(im.reshape([IMAGE_SIZE,IMAGE_SIZE]))
+    plt.subplot(3,5,11+i)
+    plt.imshow(reshaped_labels[i*nr_pixel:i*nr_pixel+nr_pixel].reshape([IMAGE_SIZE,IMAGE_SIZE]))
+  plt.show()
+  print(input_data.shape)
   print("sum of class 1 pred: " +str(numpy.sum(numpy.argmax(predictions, 1)==1)))
   print("sum of class 0 pred: " +str(numpy.sum(numpy.argmax(predictions, 1)==0)))
 
@@ -184,7 +187,7 @@ def main(argv=None):  # pylint: disable=unused-argument
   # We will replicate the model structure for the training subgraph, as well
   # as the evaluation subgraphs, while sharing the trainable parameters.
   
-  def model(data, train=False):
+  def model(data, train=False, prefix=""):
     """The Model definition."""
     # 2D convolution, with 'SAME' padding (i.e. the output feature map has
     # the same size as the input). Note that {strides} is a 4D array whose
@@ -192,7 +195,7 @@ def main(argv=None):  # pylint: disable=unused-argument
 
     # 28x28
     conv = helpers.conv2d(data,
-                          name="conv1",
+                          name=prefix+"conv1",
                           kernel_width=5,
                           num_filters=32,
                           transfer=tf.nn.relu,
@@ -201,33 +204,33 @@ def main(argv=None):  # pylint: disable=unused-argument
     # Max pooling. The kernel size spec {ksize} also follows the layout of
     # the data. Here we have a pooling window of 2, and a stride of 2.
     pool = helpers.pool(conv, 
-                        name="pool1", 
+                        name=prefix+"pool1", 
                         kernel_width=2)
     print("After first pool: "+str(pool.get_shape()))
 #    print("After first conv: "+str(relu.get_shape())
     # 14x14
     conv = helpers.conv2d(pool,
-                          name="conv2",
+                          name=prefix+"conv2",
                           kernel_width=5,
                           num_filters=64,
                           transfer=tf.nn.relu,
                           decay_rate=DECAY_RATE)
     print("After second conv: "+str(conv.get_shape()))
-    pool = helpers.pool(conv,
-                        name="pool2",
-                        kernel_width=2)
-    print("After second pool: "+str(pool.get_shape()))
-    # 7x7
-    conv = helpers.conv2d(pool,
-                          name="conv3",
-                          kernel_width=3,
-                          num_filters=64,
-                          transfer=tf.nn.relu,
-                          padding='SAME',
-                          decay_rate=DECAY_RATE)
-    print("After third conv: "+str(conv.get_shape()))
+    # pool = helpers.pool(conv,
+    #                     name=prefix+"pool2",
+    #                     kernel_width=2)
+    # print("After second pool: "+str(pool.get_shape()))
+    # # 7x7
+    # conv = helpers.conv2d(pool,
+    #                       name=prefix+"conv3",
+    #                       kernel_width=3,
+    #                       num_filters=128,
+    #                       transfer=tf.nn.relu,
+    #                       padding='SAME',
+    #                       decay_rate=DECAY_RATE)
+    # print("After third conv: "+str(conv.get_shape()))
     # conv = helpers.conv2d(conv,
-    #                       name="1x1",
+    #                       name=prefix+"1x1",
     #                       kernel_width=1,
     #                       num_filters=512,
     #                       transfer=tf.nn.relu,
@@ -235,44 +238,44 @@ def main(argv=None):  # pylint: disable=unused-argument
     if train:
       conv = tf.nn.dropout(conv, 0.5, seed=SEED)
     # 5x5
-    print("After 1x1 conv: "+str(conv.get_shape()))
+    # print("After 1x1 conv: "+str(conv.get_shape()))
     # size = tf.constant([7, 7])
     # unpool = tf.image.resize_nearest_neighbor(conv,
     #                                   size,
     #                                   align_corners=None, 
-    #                                   name="unpool1")
+    #                                   name=prefix+"unpool1")
     # print("After first unpool: "+str(unpool.get_shape()))
     # # 7x7
     # conv = helpers.conv2d(unpool,
-    #                       name="deconv1",
+    #                       name=prefix+"deconv1",
     #                       kernel_width=3,
     #                       num_filters=64,
     #                       transfer=tf.nn.relu,
     #                       decay_rate=DECAY_RATE)
     # print("After first deconv: "+str(conv.get_shape()))
     # # 7x7 
-    size = tf.constant([14, 14])
-    unpool = tf.image.resize_nearest_neighbor(conv,
-                                      size, 
-                                      align_corners=None, 
-                                      name="unpool2")
-    print("After second unpool: "+str(unpool.get_shape()))
-    # 14x14
-    conv = helpers.conv2d(unpool,
-                          name="deconv2",
-                          kernel_width=3,
-                          num_filters=32,
-                          transfer=tf.nn.relu,
-                          decay_rate=DECAY_RATE)
-    print("After second deconv: "+str(conv.get_shape()))
+    # size = tf.constant([14, 14])
+    # unpool = tf.image.resize_nearest_neighbor(conv,
+    #                                   size, 
+    #                                   align_corners=None, 
+    #                                   name=prefix+"unpool2")
+    # print("After second unpool: "+str(unpool.get_shape()))
+    # # 14x14
+    # conv = helpers.conv2d(unpool,
+    #                       name=prefix+"deconv2",
+    #                       kernel_width=3,
+    #                       num_filters=32,
+    #                       transfer=tf.nn.relu,
+    #                       decay_rate=DECAY_RATE)
+    # print("After second deconv: "+str(conv.get_shape()))
     size = tf.constant([28, 28])
     unpool = tf.image.resize_nearest_neighbor(conv, 
                                       size, 
                                       align_corners=None, 
-                                      name="unpool3")
+                                      name=prefix+"unpool3")
     print("After third unpool: "+str(unpool.get_shape()))
     conv = helpers.conv2d(unpool,
-                          name="deconv3",
+                          name=prefix+"deconv3",
                           kernel_width=3,
                           num_filters=2,
                           transfer=tf.nn.relu,
@@ -287,6 +290,7 @@ def main(argv=None):  # pylint: disable=unused-argument
     return reshape
 
   # Training computation: logits + cross-entropy loss.
+  print(train_data_node)
   logits = model(train_data_node, True)
 
   print(logits)
@@ -300,7 +304,7 @@ def main(argv=None):  # pylint: disable=unused-argument
   reshaped_labels = tf.reshape(train_labels_node,
                               [label_shape[0]*label_shape[1]*label_shape[2]])
   print(reshaped_labels.get_shape())
-  loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
+  loss = tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(
                         logits, reshaped_labels))
 
   # Optimizer: set up a variable that's incremented once per batch and
@@ -308,44 +312,52 @@ def main(argv=None):  # pylint: disable=unused-argument
   batch = tf.Variable(0)
   # Decay once per epoch, using an exponential schedule starting at 0.01.
   learning_rate = tf.train.exponential_decay(
-      0.001,                # Base learning rate.
+      0.01,                # Base learning rate.
       batch * BATCH_SIZE,  # Current index into the dataset.
       train_size,          # Decay step.
       0.85,                # Decay rate.
       staircase=True)
   # Use simple momentum for the optimization.
-  optimizer = tf.train.MomentumOptimizer(learning_rate,
-                                         0.9).minimize(loss,
-                                                       global_step=batch)
+  # optimizer = tf.train.MomentumOptimizer(learning_rate,
+  #                                        0.9).minimize(loss,
+  #                                                      global_step=batch)
+  optimizer = tf.train.AdamOptimizer(learning_rate=0.001,
+                                     beta1=0.9, 
+                                     beta2=0.999, 
+                                     epsilon=1e-08, 
+                                     use_locking=False, 
+                                     name='Adam').minimize(loss,global_step=batch)
 
   # Predictions for the current training minibatch.
-  train_prediction = logits
-  #  train_prediction = tf.nn.softmax(logits)
+  # train_prediction = logits
+  train_prediction = tf.nn.softmax(logits)
 
   # Predictions for the test and validation, which we'll compute less often.
-#  eval_prediction = model(eval_data)
+  eval_prediction = model(eval_data, prefix="eval")
 
   # Small utility function to evaluate a dataset by feeding batches of data to
   # {eval_data} and pulling the results from {eval_predictions}.
   # Saves memory and enables this to run on smaller GPUs.
-  def eval_in_batches(data, sess):
-    """Get all predictions for a dataset by running it in small batches."""
-    size = data.shape[0]
-    if size < EVAL_BATCH_SIZE:
-      raise ValueError("batch size for evals larger than dataset: %d" % size)
-    predictions = numpy.ndarray(shape=(size, NUM_LABELS), dtype=numpy.float32)
-    for begin in xrange(0, size, EVAL_BATCH_SIZE):
-      end = begin + EVAL_BATCH_SIZE
-      if end <= size:
-        predictions[begin:end, :] = sess.run(
-            eval_prediction,
-            feed_dict={eval_data: data[begin:end, ...]})
-      else:
-        batch_predictions = sess.run(
-            eval_prediction,
-            feed_dict={eval_data: data[-EVAL_BATCH_SIZE:, ...]})
-        predictions[begin:, :] = batch_predictions[begin - size:, :]
-    return predictions
+  # def eval_in_batches(data, sess):
+  #   """Get all predictions for a dataset by running it in small batches."""
+  #   print(data.shape)
+  #   size = data.shape[0]
+  #   if size < EVAL_BATCH_SIZE:
+  #     raise ValueError("batch size for evals larger than dataset: %d" % size)
+  #   predictions = numpy.ndarray(shape=(size*IMAGE_SIZE*IMAGE_SIZE, NUM_LABELS), dtype=numpy.float32)
+  #   print(predictions.shape)
+  #   for begin in xrange(0, size, EVAL_BATCH_SIZE):
+  #     end = begin + EVAL_BATCH_SIZE
+  #     if end <= size:
+  #       predictions[begin:end, :] = sess.run(
+  #           eval_prediction,
+  #           feed_dict={eval_data: data[begin:end, ...]})
+  #     else:
+  #       batch_predictions = sess.run(
+  #           eval_prediction,
+  #           feed_dict={eval_data: data[-EVAL_BATCH_SIZE:, ...]})
+  #       predictions[begin:, :] = batch_predictions[begin - size:, :]
+  #   return predictions
 
   # Create a local session to run the training.
   start_time = time.time()
@@ -378,9 +390,9 @@ def main(argv=None):  # pylint: disable=unused-argument
               (step, float(step) * BATCH_SIZE / train_size,
                1000 * elapsed_time / EVAL_FREQUENCY))
         print('Minibatch loss: %.3f, learning rate: %.6f' % (l, lr))
-        print('Minibatch error: %.1f%%' % error_rate(predictions, batch_labels))
-#        print('Validation error: %.1f%%' % error_rate(
-#            eval_in_batches(validation_data, sess), validation_labels))
+        print('Minibatch error: %.1f%%' % error_rate(predictions, batch_labels, batch_data))
+        # print('Validation error: %.1f%%' % error_rate(
+        #        eval_in_batches(validation_data, sess), validation_labels))
         sys.stdout.flush()
 #        save_path = saver.save(sess, "modelMnist.ckpt")
 #        print('Model saved in file: %s' % save_path)
