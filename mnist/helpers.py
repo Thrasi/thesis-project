@@ -20,7 +20,7 @@ def conv2d(input, name, kernel_width, num_filters, transfer=tf.nn.elu, padding='
                                                            c, num_filters],
                                          stddev=math.sqrt(2.0 / n), wd=decay_rate)
     conv = tf.nn.conv2d(input, kernel, [1, 1, 1, 1], padding=padding)
-    biases = _variable_on_cpu('biases', [num_filters], tf.constant_initializer(0.0))
+    biases = _variable_on_cpu('biases', [num_filters], tf.constant_initializer(0.1))
     bias = tf.nn.bias_add(conv, biases)
     x = transfer(bias, name=scope.name)
     _activation_summary(x)
