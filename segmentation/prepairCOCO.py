@@ -5,8 +5,10 @@ import scipy as sp
 import scipy.ndimage
 import tensorflow as tf
 import matplotlib.pyplot as plt
+from matplotlib.patches import Polygon
 from pycocotools.coco import mask, COCO
 import skimage.io as io
+from skimage.draw import polygon
 import pylab
 import random
 
@@ -73,6 +75,34 @@ def get_num_of_crops(width, height, FIELD):
   nrx = 1 + int(width)/FIELD
   nry = 1 + int(height)/FIELD
   return nrx*nry
+
+# def annsToMasks(anns):
+#   if len(anns) == 0:
+#     return 0
+#   polygons = []
+#   masks = []
+#   color =[]
+#   for ann in anns:
+#     c = ann['category_id']
+#     if type(ann['segmentation']) == list:
+#       for seg in ann['segmentation']:
+#         poly = np.array(seg).reshape((len(seg)/2, 2))
+#         polygons.append(Polygon(poly, True,alpha=0.4))
+#         # t = self.imgs[ann['image_id']]
+#         t = coco.loadImgs(ann['image_id'])
+#         rle = mask.frPyObjects([seg], t['height'], t['width'])
+#         m = mask.decode(rle)
+#         masks.append(m*c)
+#     else:
+#       t = self.imgs[ann['image_id']]
+#       if type(ann['segmentation']['counts']) == list:
+#         rle = mask.frPyObjects([ann['segmentation']], t['height'], t['width'])
+#       else:
+#         rle = [ann['segmentation']]
+#       m = mask.decode(rle)
+#       masks.append(m*c)
+#   p = PatchCollection(polygons, facecolors=color, edgecolors=(0,0,0,1), linewidths=3, alpha=0.4)
+#   return masks
 
 def get_crops(img, annotations, image, ground_truth):
   """Returns a list of tuples containing a crop from the 
