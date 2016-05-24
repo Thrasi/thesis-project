@@ -26,6 +26,7 @@ from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 
 import cifar10
+import matplotlib.pyplot as plt
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -80,8 +81,18 @@ def train():
 
     for step in xrange(FLAGS.max_steps):
       start_time = time.time()
-      _, loss_value = sess.run([train_op, loss])
+      imgs, lbls,_, loss_value = sess.run([images, labels, train_op, loss])
       duration = time.time() - start_time
+      # print (type(imgs))
+      # print (type(lbls))
+      # print (images.shape)
+      # print (labels.shape)
+      # plt.subplot(121)
+      # plt.imshow(imgs[0,:,:,:])
+      # plt.subplot(122)
+      # plt.imshow(lbls[0,:,:,0])
+      # plt.show()
+
 
       assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
 

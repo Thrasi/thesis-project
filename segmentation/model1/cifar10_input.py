@@ -23,6 +23,7 @@ import os
 
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
+from tensorflow.python.ops import array_ops
 
 # Process images of this size. Note that this differs from the original CIFAR
 # image size of 64 x 64. If one alters this number, then the entire model
@@ -31,7 +32,7 @@ IMAGE_SIZE = 64
 
 # Global constants describing the CIFAR-10 data set.
 NUM_CLASSES = 5
-NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 2
+NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 67652
 NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 1000
 
 def read_cifar10(filename_queue):
@@ -60,17 +61,26 @@ def read_cifar10(filename_queue):
   features = tf.parse_single_example(
     serialized_example,
     features={
-        'image_raw': tf.FixedLenFeature([], tf.string),
-        'mask': tf.FixedLenFeature([], tf.string),
+        # 'image_raw': tf.FixedLenFeature([], tf.string),
+        # 'mask': tf.FixedLenFeature([], tf.string),
+        'height': tf.FixedLenFeature([], tf.int64),
+        'width': tf.FixedLenFeature([], tf.int64),
+        'image_and_mask': tf.FixedLenFeature([], tf.string),
     })
 
-  result.image = tf.decode_raw(features['image_raw'], tf.uint8)
-  print("image input shape: "+str(result.image.get_shape()))
-  result.image = tf.reshape(result.image, [IMAGE_SIZE,IMAGE_SIZE,3])
+  result.height = tf.cast(features['height'], tf.int32)
+  result.width = tf.cast(features['width'], tf.int32)
+  shape = tf.pack([result.width,result.height,4])
+  result.image_and_mask = tf.decode_raw(features['image_and_mask'], tf.uint8)
+  result.image_and_mask = tf.reshape(result.image_and_mask, shape)
 
-  result.label = tf.decode_raw(features['mask'], tf.uint8)
-  print("label shape: "+str(result.label.get_shape()))
-  result.label = tf.reshape(result.label, [IMAGE_SIZE,IMAGE_SIZE])
+  # result.image = tf.decode_raw(features['image_raw'], tf.uint8)
+  # print("image input shape: "+str(result.image.get_shape()))
+  # result.image = tf.reshape(result.image, [IMAGE_SIZE,IMAGE_SIZE,3])
+
+  # result.label = tf.decode_raw(features['mask'], tf.uint8)
+  # print("label shape: "+str(result.label.get_shape()))
+  # result.label = tf.reshape(result.label, [IMAGE_SIZE,IMAGE_SIZE])
   return result
 
 
@@ -92,7 +102,7 @@ def _generate_image_and_label_batch(image, label, min_queue_examples,
   """
   # Create a queue that shuffles the examples, and then
   # read 'batch_size' images + labels from the example queue.
-  num_preprocess_threads = 16
+  num_preprocess_threads = 4
   if shuffle:
     images, label_batch = tf.train.shuffle_batch(
         [image, label],
@@ -124,7 +134,7 @@ def distorted_inputs(data_dir, batch_size):
     images: Images. 4D tensor of [batch_size, IMAGE_SIZE, IMAGE_SIZE, 3] size.
     labels: Labels. 3D tensor of [batch_size, IMAGE_SIZE, IMAGE_SIZE] size.
   """
-  filenames = [os.path.join(data_dir, "coco64by64.tfrecords")]
+  filenames = [os.path.join(data_dir, "coco64by64val.tfrecords")]
   for f in filenames:
     if not tf.gfile.Exists(f):
       raise ValueError('Failed to find file: ' + f)
@@ -134,7 +144,7 @@ def distorted_inputs(data_dir, batch_size):
 
   # Read examples from files in the filename queue.
   read_input = read_cifar10(filename_queue)
-  reshaped_image = tf.cast(read_input.image, tf.float32)
+  reshaped_image = tf.cast(read_input.image_and_mask, tf.float32)
 
   height = IMAGE_SIZE
   width = IMAGE_SIZE
@@ -142,9 +152,28 @@ def distorted_inputs(data_dir, batch_size):
   # Image processing for training the network. Note the many random
   # distortions applied to the image.
 
-  # Randomly flip the image horizontally.
-  # distorted_image = tf.image.random_flip_left_right(reshaped_image)
+  # Randomly crop a [height, width] section of the image.
+
   distorted_image = reshaped_image
+  distorted_image = tf.random_crop(distorted_image, [height, width, 4])
+
+
+  # Randomly flip the image horizontally.
+  distorted_image = tf.image.random_flip_left_right(distorted_image)
+  print("SHAPES:")
+  print(distorted_image)
+  # offset = tf.pack([0,0,3])
+  # size = tf.pack([64,64,1])
+  # label = array_ops.slice(distorted_image, offset, size)
+  label = distorted_image[0:width,0:height,3:]
+  print (label)
+  
+  # offset = tf.pack([0,0,0])
+  # size = tf.pack([64,64,3])
+  # distorted_image = array_ops.slice(distorted_image, offset, size)
+  distorted_image = distorted_image[0:width,0:height,0:3]
+  # dis
+  print (distorted_image)
   # Because these operations are not commutative, consider randomizing
   # the order their operation.
   distorted_image = tf.image.random_brightness(distorted_image,
@@ -163,7 +192,7 @@ def distorted_inputs(data_dir, batch_size):
          'This will take a few minutes.' % min_queue_examples)
 
   # Generate a batch of images and labels by building up a queue of examples.
-  return _generate_image_and_label_batch(float_image, read_input.label,
+  return _generate_image_and_label_batch(float_image, label,
                                          min_queue_examples, batch_size,
                                          shuffle=True)
 
