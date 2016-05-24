@@ -81,7 +81,8 @@ def train():
 
     for step in xrange(FLAGS.max_steps):
       start_time = time.time()
-      imgs, lbls,_, loss_value = sess.run([images, labels, train_op, loss])
+      _, loss_value = sess.run([train_op, loss])
+      # imgs, lbls,_, loss_value = sess.run([images, labels, train_op, loss])
       duration = time.time() - start_time
       # print (type(imgs))
       # print (type(lbls))
@@ -92,7 +93,6 @@ def train():
       # plt.subplot(122)
       # plt.imshow(lbls[0,:,:,0])
       # plt.show()
-
 
       assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
 
@@ -123,7 +123,6 @@ def main(argv=None):  # pylint: disable=unused-argument
     tf.gfile.DeleteRecursively(FLAGS.train_dir)
   tf.gfile.MakeDirs(FLAGS.train_dir)
   train()
-
 
 if __name__ == '__main__':
   tf.app.run()
