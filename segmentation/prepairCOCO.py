@@ -133,6 +133,7 @@ def get_crops(img, annotations, image, ground_truth):
         col, row = sample_coords(bbox, img)
         img_crop = image[col:col+FIELD, row:row+FIELD, :]
         mask_crop = ground_truth[col:col+FIELD, row:row+FIELD]
+        mask_crop = np.expand_dims(mask_crop, axis=2)
         masked_pixels = np.sum(mask_crop > 0)
         size = mask_crop.shape[0]*mask_crop.shape[1]
         if 0.2 < masked_pixels/float(size) < 0.8:
@@ -200,7 +201,8 @@ def test(coco, categories, path_to_files , output_file):
   random.shuffle(imgIds)
   n=1
   number_of_drops = 0
-  for imgId in imgIds:
+  total_crops_written = 0
+  for imgId in imgIds[:100]:
     if n%1000==0:
       print "processed {} images".format(n)
     n+=1
@@ -222,15 +224,36 @@ def test(coco, categories, path_to_files , output_file):
     for crop in crops:
       image_raw = crop[0].tostring() 
       mask = crop[1].tostring()
+      image_and_mask = np.concatenate((crop[0], crop[1]), axis=2)#,dtype='uint8')#.astype('uint8')
+      image_and_mask = image_and_mask.astype('uint8')
+      # image_and_mask = image_and_mask #/ 255.
+      # image = image_and_mask[:,:,:3] /255.
+      # plt.subplot(231)
+      # plt.imshow(crop[0])
+      # plt.subplot(232)
+      # plt.imshow(image_and_mask[:,:,:3])
+      # plt.subplot(233)
+      # plt.imshow(image_and_mask[:,:,0])
+      # plt.subplot(234)
+      # plt.imshow(image_and_mask[:,:,1])
+      # plt.subplot(235)
+      # plt.imshow(image_and_mask[:,:,2])
+      # plt.subplot(236)
+      # plt.imshow(image_and_mask[:,:,3])
+      # plt.show()
       example = tf.train.Example(features=tf.train.Features(feature={
-          # 'height': _int64_feature(random.randint(0,100))
-          'mask': _bytes_feature(mask),
-          'image_raw': _bytes_feature(image_raw)
+          'height': _int64_feature(64),
+          'width': _int64_feature(64),
+          'image_and_mask': _bytes_feature(image_and_mask.tostring()),
+          # 'image_and_mask': _bytes_feature(crop[0].tostring()),
+          # 'mask': _bytes_feature(mask),
+          # 'image_raw': _bytes_feature(image_raw)
           }))
       # print example.mask
       if crop[0].shape[0]*crop[0].shape[1]*crop[0].shape[2] != 12288:
         number_of_drops+=1
       else:
+        total_crops_written+=1
         writer.write(example.SerializeToString())
       #   print "im shape: "+str(crop[0].shape)
       #   print "nr el: "+str(crop[0].shape[0]*crop[0].shape[1]*crop[0].shape[2])
@@ -254,6 +277,7 @@ def test(coco, categories, path_to_files , output_file):
   print "nr of annotations: {}".format(count)
   print "nr of crops: {}".format(nr_crops)
   print "nr of drops: {}".format(number_of_drops)
+  print "nr of written crops: {}".format(total_crops_written)
 
 
   return count
@@ -279,7 +303,7 @@ if __name__=='__main__':
   ["person", "cat", "couch", "car"]
   FILE_PATH = "/home/mb/Documents/kth/thesis-project/segmentation/coco/images/val2014"
   ANN_FILE_PATH = "/home/mb/Documents/kth/thesis-project/segmentation/coco/annotations/instances_val2014.json"
-  TF_RECORD_PATH ="/home/mb/Documents/kth/thesis-project/segmentation/coco64by64.tfrecords"
+  TF_RECORD_PATH ="/home/mb/Documents/kth/thesis-project/segmentation/coco64by64val.tfrecords"
   CATEGORIES = ["person", "cat", "couch", "car"]
   # read_files(FILE_PATH)
   # ANNOTATION_FILE = "../annotations/instances_val2014.json"
