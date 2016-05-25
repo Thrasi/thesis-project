@@ -106,7 +106,7 @@ def train():
         sec_per_batch = float(duration)
 
         format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
-                      'sec/batch)\n Accuracy = %.4f, human precision = %.4f')
+                      'sec/batch)\n Accuracy = %.4f, human average precision = %.4f')
         print (format_str % (datetime.now(), step, loss_value,
                              examples_per_sec, sec_per_batch,
                              accuracy_value, precision_value))
