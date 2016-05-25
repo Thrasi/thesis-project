@@ -311,6 +311,36 @@ def loss(logits, labels):
 
   return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
+def accuracy(logits, labels):
+  labels = tf.cast(labels, tf.int64)
+  label_shape = labels.get_shape().as_list()
+  reshaped_labels = tf.reshape(labels,
+                              [label_shape[0]*label_shape[1]*label_shape[2]])
+
+  logits_shape =logits.get_shape().as_list()
+  reshaped_logits = tf.reshape(logits,
+                              [logits_shape[0]*logits_shape[1]*logits_shape[2],
+                              logits_shape[3]])
+  predictions = tf.argmax(reshaped_logits, dimension=1)
+  correct_predictions = tf.equal(predictions, reshaped_labels)
+  accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"))
+  def tf_count(t, val):
+    elements_equal_to_value = tf.equal(t, val)
+    as_ints = tf.cast(elements_equal_to_value, tf.int32)
+    count = tf.reduce_sum(as_ints)
+    return count
+
+  human_pred = tf.equal(predictions,1)
+  human_truth = tf.equal(reshaped_labels,1)
+  non_human_truth = tf.not_equal(reshaped_labels,1)
+  tp = tf.logical_and(human_pred, human_truth)
+  tp_count = tf.reduce_sum(tf.cast(tp, "float"))
+  fp = tf.logical_and(human_pred, human_truth)
+  fp_count = tf.reduce_sum(tf.cast(fp, "float"))
+  human_precision = tp_count / (tp_count + fp_count)
+
+  return accuracy, human_precision
+
 
 def _add_loss_summaries(total_loss):
   """Add summaries for losses in CIFAR-10 model.

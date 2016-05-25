@@ -55,6 +55,7 @@ def train():
     print("after inference")
     # Calculate loss.
     loss = cifar10.loss(logits, labels)
+    accuracy, precision = cifar10.accuracy(logits, labels)
 
     # Build a Graph that trains the model with one batch of examples and
     # updates the model parameters.
@@ -81,9 +82,12 @@ def train():
 
     for step in xrange(FLAGS.max_steps):
       start_time = time.time()
-      _, loss_value = sess.run([train_op, loss])
+      _, loss_value, accuracy_value, precision_value = sess.run([train_op, loss, accuracy, precision])
       # imgs, lbls,_, loss_value = sess.run([images, labels, train_op, loss])
       duration = time.time() - start_time
+      # print (accuracy_value)
+      # print (precision_value)
+      # print (accuracy_value[1])
       # print (type(imgs))
       # print (type(lbls))
       # print (images.shape)
@@ -102,9 +106,10 @@ def train():
         sec_per_batch = float(duration)
 
         format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
-                      'sec/batch)')
+                      'sec/batch)\n Accuracy = %.4f, human precision = %.4f')
         print (format_str % (datetime.now(), step, loss_value,
-                             examples_per_sec, sec_per_batch))
+                             examples_per_sec, sec_per_batch,
+                             accuracy_value, precision_value))
 
       if step % 100 == 0:
         summary_str = sess.run(summary_op)
