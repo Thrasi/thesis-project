@@ -54,7 +54,7 @@ FLAGS = tf.app.flags.FLAGS
 # Basic model parameters.
 tf.app.flags.DEFINE_integer('batch_size', 128,
                             """Number of images to process in a batch.""")
-tf.app.flags.DEFINE_string('data_dir', '/home/mb/Documents/kth/thesis-project/segmentation/data',
+tf.app.flags.DEFINE_string('data_dir', '/home/magnus/thesis-project/segmentation/data',
                            """Path to the my data directory.""")
 
 # Global constants describing the my data set.
@@ -68,7 +68,7 @@ DECAY_RATE = 5e-4
 MOVING_AVERAGE_DECAY = 0.9999     # The decay to use for the moving average.
 NUM_EPOCHS_PER_DECAY = 350.0      # Epochs after which learning rate decays.
 LEARNING_RATE_DECAY_FACTOR = 0.1  # Learning rate decay factor.
-INITIAL_LEARNING_RATE = 0.1       # Initial learning rate.
+INITIAL_LEARNING_RATE = 0.0005       # Initial learning rate.
 
 # If a model is trained with multiple GPUs, prefix all Op names with tower_name
 # to differentiate the operations. Note that this prefix is removed from the
@@ -369,7 +369,13 @@ def train(total_loss, global_step):
 
   # Compute gradients.
   with tf.control_dependencies([loss_averages_op]):
-    opt = tf.train.GradientDescentOptimizer(lr)
+    # opt = tf.train.GradientDescentOptimizer(lr)
+    opt = tf.train.AdamOptimizer(learning_rate=0.0001,
+                                       beta1=0.9,
+                                       beta2=0.999,
+                                       epsilon=1e-08,
+                                       use_locking=False,
+                                       name='Adam')#.minimize(loss,global_step=batch)
     grads = opt.compute_gradients(total_loss)
 
   # Apply gradients.

@@ -31,7 +31,7 @@ IMAGE_SIZE = 64
 
 # Global constants describing the CIFAR-10 data set.
 NUM_CLASSES = 5
-NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 2
+NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 67652
 NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 1000
 
 def read_cifar10(filename_queue):
@@ -124,7 +124,7 @@ def distorted_inputs(data_dir, batch_size):
     images: Images. 4D tensor of [batch_size, IMAGE_SIZE, IMAGE_SIZE, 3] size.
     labels: Labels. 3D tensor of [batch_size, IMAGE_SIZE, IMAGE_SIZE] size.
   """
-  filenames = [os.path.join(data_dir, "coco64by64.tfrecords")]
+  filenames = [os.path.join(data_dir, "coco64by64train.tfrecords")]
   for f in filenames:
     if not tf.gfile.Exists(f):
       raise ValueError('Failed to find file: ' + f)
