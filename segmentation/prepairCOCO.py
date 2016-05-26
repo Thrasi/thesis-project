@@ -202,7 +202,7 @@ def test(coco, categories, path_to_files , output_file):
   n=1
   number_of_drops = 0
   total_crops_written = 0
-  for imgId in imgIds[:100]:
+  for imgId in imgIds[:200]:
     if n%1000==0:
       print "processed {} images".format(n)
     n+=1
@@ -226,6 +226,9 @@ def test(coco, categories, path_to_files , output_file):
       mask = crop[1].tostring()
       image_and_mask = np.concatenate((crop[0], crop[1]), axis=2)#,dtype='uint8')#.astype('uint8')
       image_and_mask = image_and_mask.astype('uint8')
+      # print np.min(crop[1])
+      # print np.max(crop[1])
+      # print "      "
       # image_and_mask = image_and_mask #/ 255.
       # image = image_and_mask[:,:,:3] /255.
       # plt.subplot(231)
@@ -301,9 +304,10 @@ def load_ann_file(ann_file_path):
 
 if __name__=='__main__':
   ["person", "cat", "couch", "car"]
-  FILE_PATH = "/home/mb/Documents/kth/thesis-project/segmentation/coco/images/val2014"
-  ANN_FILE_PATH = "/home/mb/Documents/kth/thesis-project/segmentation/coco/annotations/instances_val2014.json"
-  TF_RECORD_PATH ="/home/mb/Documents/kth/thesis-project/segmentation/coco64by64val.tfrecords"
+  dataset = "val"
+  FILE_PATH = "/home/mb/Documents/kth/thesis-project/segmentation/coco/images/"+dataset+"2014"
+  ANN_FILE_PATH = "/home/mb/Documents/kth/thesis-project/segmentation/coco/annotations/instances_"+dataset+"2014.json"
+  TF_RECORD_PATH ="/home/mb/Documents/kth/thesis-project/segmentation/coco64by64"+dataset+".tfrecords"
   CATEGORIES = ["person", "cat", "couch", "car"]
   # read_files(FILE_PATH)
   # ANNOTATION_FILE = "../annotations/instances_val2014.json"
