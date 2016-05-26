@@ -70,6 +70,7 @@ NUM_EPOCHS_PER_DECAY = 350.0      # Epochs after which learning rate decays.
 LEARNING_RATE_DECAY_FACTOR = 0.1  # Learning rate decay factor.
 INITIAL_LEARNING_RATE = 0.0005       # Initial learning rate.
 
+
 # If a model is trained with multiple GPUs, prefix all Op names with tower_name
 # to differentiate the operations. Note that this prefix is removed from the
 # names of the summaries when visualizing a model.
@@ -153,21 +154,22 @@ def distorted_inputs():
 
 
 def inputs(eval_data):
-  """Construct input for CIFAR evaluation using the Reader ops.
+  """Construct input for COCO evaluation using the Reader ops.
 
   Args:
     eval_data: bool, indicating if one should use the train or eval data set.
 
   Returns:
     images: Images. 4D tensor of [batch_size, IMAGE_SIZE, IMAGE_SIZE, 3] size.
-    labels: Labels. 1D tensor of [batch_size] size.
+    labels: Labels. 3D tensor of [batch_size, IMAGE_SIZE, IMAGE_SIZE] size.
 
   Raises:
     ValueError: If no data_dir
   """
   if not FLAGS.data_dir:
     raise ValueError('Please supply a data_dir')
-  data_dir = os.path.join(FLAGS.data_dir, 'cifar-10-batches-bin')
+  # data_dir = os.path.join(FLAGS.data_dir, 'cifar-10-batches-bin')
+  data_dir = FLAGS.data_dir
   return cifar10_input.inputs(eval_data=eval_data, data_dir=data_dir,
                               batch_size=FLAGS.batch_size)
 
@@ -310,6 +312,62 @@ def loss(logits, labels):
   tf.add_to_collection('losses', cross_entropy_mean)
 
   return tf.add_n(tf.get_collection('losses'), name='total_loss')
+
+def accuracy(logits, labels):
+  labels = tf.cast(labels, tf.int64)
+  label_shape = labels.get_shape().as_list()
+  reshaped_labels = tf.reshape(labels,
+                              [label_shape[0]*label_shape[1]*label_shape[2]])
+
+  logits_shape = logits.get_shape().as_list()
+  reshaped_logits = tf.reshape(logits,
+                              [logits_shape[0]*logits_shape[1]*logits_shape[2],
+                              logits_shape[3]])
+  predictions = tf.argmax(reshaped_logits, dimension=1)
+  correct_predictions = tf.equal(predictions, reshaped_labels)
+  accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name='accuracy')
+  tf.add_to_collection('accuracy', accuracy)
+
+  def tf_count(t, val):
+    elements_equal_to_value = tf.equal(t, val)
+    as_ints = tf.cast(elements_equal_to_value, tf.int32)
+    count = tf.reduce_sum(as_ints)
+    return count
+
+  human_pred = tf.equal(predictions,1)
+  human_truth = tf.equal(reshaped_labels,1)
+  non_human_truth = tf.not_equal(reshaped_labels,1)
+
+  tp = tf.logical_and(human_pred, human_truth)
+  tp_count = tf.reduce_sum(tf.cast(tp, "float"))
+  fp = tf.logical_and(human_pred, human_truth)
+  fp_count = tf.reduce_sum(tf.cast(fp, "float"))
+  
+  human_precision = tp_count / (tp_count + fp_count)
+  
+  tf.add_to_collection('precision',human_precision)
+
+  # accuracy_op, human_precision_op = _add_accuracy_precision_summaries(accuracy, human_precision)
+
+  return accuracy, human_precision
+
+def _add_accuracy_precision_summaries(accuracy, precision):
+  accuracy_averages = tf.train.ExponentialMovingAverage(0.9, name='avg')
+  accuracies = tf.get_collection('accuracy')
+  accuracy_average_op = accuracy_averages.apply(accuracies + [accuracy])
+
+  for a in accuracies + [accuracy]:
+    tf.scalar_summary(a.op.name +' (raw)', a)
+    tf.scalar_summary(a.op.name, accuracy_averages.average(a))
+
+  precision_averages = tf.train.ExponentialMovingAverage(0.9, name='avg')
+  precisions = tf.get_collection('precision')
+  precision_average_op = accuracy_averages.apply(precisions + [precision])  
+
+  for p in precisions + [precisions]:
+    tf.scalar_summary("human_precision (raw)", p)
+    tf.scalar_summary("human_precision", precision_averages.average(p))
+  return accuracy_average_op, precision_average_op
 
 
 def _add_loss_summaries(total_loss):
