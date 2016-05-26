@@ -188,14 +188,14 @@ def inputs(eval_data, data_dir, batch_size):
 
   Returns:
     images: Images. 4D tensor of [batch_size, IMAGE_SIZE, IMAGE_SIZE, 3] size.
-    labels: Labels. 1D tensor of [batch_size] size.
+    labels: Labels. 3D tensor of [batch_size, IMAGE_SIZE, IMAGE_SIZE] size.
   """
   if not eval_data:
-    filenames = [os.path.join(data_dir, 'data_batch_%d.bin' % i)
-                 for i in xrange(1, 6)]
+    filenames = [os.path.join(data_dir, "coco64by64val.tfrecords")]
     num_examples_per_epoch = NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN
   else:
-    filenames = [os.path.join(data_dir, 'test_batch.bin')]
+    print (data_dir)
+    filenames = [os.path.join(data_dir, "coco64by64val.tfrecords")]
     num_examples_per_epoch = NUM_EXAMPLES_PER_EPOCH_FOR_EVAL
 
   for f in filenames:
@@ -207,18 +207,28 @@ def inputs(eval_data, data_dir, batch_size):
 
   # Read examples from files in the filename queue.
   read_input = read_cifar10(filename_queue)
-  reshaped_image = tf.cast(read_input.uint8image, tf.float32)
+
+  reshaped_image = tf.cast(read_input.image_and_mask, tf.float32)
 
   height = IMAGE_SIZE
   width = IMAGE_SIZE
 
+  ### Here we don't crop the center because the image is 64x64
+  ### But if the image is larger we need to think if how to do this.
+  ### Or if All since we use an FCN
   # Image processing for evaluation.
   # Crop the central [height, width] of the image.
-  resized_image = tf.image.resize_image_with_crop_or_pad(reshaped_image,
-                                                         width, height)
+  # resized_image = tf.image.resize_image_with_crop_or_pad(reshaped_image,
+  #                                                        width, height)
+  resized_image = reshaped_image
+
+  label = tf.cast(resized_image[0:width,0:height,3:4], "int32")
+  resized_image = resized_image[0:width,0:height,0:3]
 
   # Subtract off the mean and divide by the variance of the pixels.
   float_image = tf.image.per_image_whitening(resized_image)
+  print (float_image)
+  print (label)
 
   # Ensure that the random shuffling has good mixing properties.
   min_fraction_of_examples_in_queue = 0.4
@@ -226,6 +236,6 @@ def inputs(eval_data, data_dir, batch_size):
                            min_fraction_of_examples_in_queue)
 
   # Generate a batch of images and labels by building up a queue of examples.
-  return _generate_image_and_label_batch(float_image, read_input.label,
+  return _generate_image_and_label_batch(float_image, label,
                                          min_queue_examples, batch_size,
-                                         shuffle=False)
+                                         shuffle=True)
