@@ -340,7 +340,7 @@ def accuracy(logits, labels):
 
   tp = tf.logical_and(human_pred, human_truth)
   tp_count = tf.reduce_sum(tf.cast(tp, "float"))
-  fp = tf.logical_and(human_pred, human_truth)
+  fp = tf.logical_and(human_pred, non_human_truth)
   fp_count = tf.reduce_sum(tf.cast(fp, "float"))
   
   human_precision = tp_count / (tp_count + fp_count)

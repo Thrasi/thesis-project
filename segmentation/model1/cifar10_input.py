@@ -68,7 +68,7 @@ def read_cifar10(filename_queue):
   result.height = tf.cast(features['height'], tf.int32)
   result.width = tf.cast(features['width'], tf.int32)
   shape = tf.pack([result.width,result.height,4])
-  result.image_and_mask = tf.decode_raw(features['image_and_mask'], tf.uint8)
+  result.image_and_mask = tf.decode_raw(features['image_and_mask'], tf.int16)
   result.image_and_mask = tf.reshape(result.image_and_mask, shape)
 
   return result
@@ -92,7 +92,7 @@ def _generate_image_and_label_batch(image, label, min_queue_examples,
   """
   # Create a queue that shuffles the examples, and then
   # read 'batch_size' images + labels from the example queue.
-  num_preprocess_threads = 16
+  num_preprocess_threads = 10
   if shuffle:
     images, label_batch = tf.train.shuffle_batch(
         [image, label],

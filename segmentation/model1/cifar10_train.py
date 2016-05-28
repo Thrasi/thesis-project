@@ -114,6 +114,11 @@ def train():
       if step % 100 == 0:
         summary_str = sess.run(summary_op)
         summary_writer.add_summary(summary_str, step)
+
+        summary = tf.Summary()
+        summary.value.add(tag='Accuracy (raw)', simple_value=float(accuracy_value))
+        summary.value.add(tag='Human precision (raw)', simple_value=float(precision_value))
+        summary_writer.add_summary(summary, step)
         print("hundred steps")
       # Save the model checkpoint periodically.
       if step % 1000 == 0 or (step + 1) == FLAGS.max_steps:

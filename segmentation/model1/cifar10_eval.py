@@ -28,13 +28,13 @@ import cifar10
 
 FLAGS = tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_string('eval_dir', '/home/mb/Documents/kth/thesis-project/segmentation/model1/eval',
+tf.app.flags.DEFINE_string('eval_dir', '/home/magnus/thesis-project/segmentation/model1/eval',
                            """Directory where to write event logs.""")
 tf.app.flags.DEFINE_string('eval_data', 'test',
                            """Either 'test' or 'train_eval'.""")
-tf.app.flags.DEFINE_string('checkpoint_dir', '/home/mb/Documents/kth/thesis-project/segmentation/model1/train',
+tf.app.flags.DEFINE_string('checkpoint_dir', '/home/magnus/thesis-project/segmentation/model1/train',
                            """Directory where to read model checkpoints.""")
-tf.app.flags.DEFINE_integer('eval_interval_secs', 60 ,
+tf.app.flags.DEFINE_integer('eval_interval_secs', 60*5 ,
                             """How often to run the eval.""")
 tf.app.flags.DEFINE_integer('num_examples', 10000,
                             """Number of examples to run.""")
@@ -63,7 +63,7 @@ def eval_once(saver, summary_writer, top_k_op, summary_op, accuracy, human_preci
     else:
       print('No checkpoint file found')
       return
-
+    print("passed checkpoint check")
     # Start the queue runners.
     coord = tf.train.Coordinator()
     try:
@@ -71,7 +71,7 @@ def eval_once(saver, summary_writer, top_k_op, summary_op, accuracy, human_preci
       for qr in tf.get_collection(tf.GraphKeys.QUEUE_RUNNERS):
         threads.extend(qr.create_threads(sess, coord=coord, daemon=True,
                                          start=True))
-
+      print("passed for loop")
       num_iter = int(math.ceil(FLAGS.num_examples / FLAGS.batch_size))
       true_count = 0  # Counts the number of correct predictions.
       total_sample_count = num_iter * FLAGS.batch_size
@@ -79,12 +79,13 @@ def eval_once(saver, summary_writer, top_k_op, summary_op, accuracy, human_preci
       acc = 0
       prec = 0
       while step < num_iter and not coord.should_stop():
+        print ("while loop")
         predictions, acc_val, hp_val = sess.run([top_k_op, accuracy, human_precision])
         true_count += np.sum(predictions)
         acc += acc_val
         prec += hp_val
         step += 1
-
+      print("passed while loop")
       # Compute precision @ 1.
       prec = prec / float(step)
       acc = acc / float(step)
@@ -99,7 +100,7 @@ def eval_once(saver, summary_writer, top_k_op, summary_op, accuracy, human_preci
       summary_writer.add_summary(summary, global_step)
     except Exception as e:  # pylint: disable=broad-except
       coord.request_stop(e)
-
+    print("done evaluating")
     coord.request_stop()
     coord.join(threads, stop_grace_period_secs=10)
 
@@ -114,6 +115,7 @@ def evaluate():
     # Build a Graph that computes the logits predictions from the
     # inference model.
     logits = cifar10.inference(images)
+    print("after inference node creation")
     loss = cifar10.loss(logits, labels)
     accuracy, precision = cifar10.accuracy(logits, labels)
     labels = tf.cast(labels, tf.int64)
@@ -142,6 +144,7 @@ def evaluate():
     summary_writer = tf.train.SummaryWriter(FLAGS.eval_dir, g)
 
     while True:
+      print("evaluate:")
       eval_once(saver, summary_writer, top_k_op, summary_op, accuracy, precision)
       if FLAGS.run_once:
         break
