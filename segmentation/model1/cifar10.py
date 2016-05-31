@@ -303,12 +303,18 @@ def loss(logits, labels):
   reshaped_logits = tf.reshape(logits,
                               [logits_shape[0]*logits_shape[1]*logits_shape[2],
                               logits_shape[3]]) 
-  cross_entropy = tf.reduce_mean(
-                          tf.nn.sparse_softmax_cross_entropy_with_logits(
-                          reshaped_logits, reshaped_labels), 
-                          name='cross_entropy_per_example')
-
-  cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
+  cross_entropy_per_pixel = tf.nn.sparse_softmax_cross_entropy_with_logits(
+                                  reshaped_logits, reshaped_labels,
+                                  name='cross_entropy_per_pixel')
+  no_loss_mask = tf.not_equal(reshaped_labels, -1)
+#  print (reshaped_labels.get_shape().as_list())
+#  print (cross_entropy.get_shape().as_list())
+#  print (no_loss_mask.get_shape().as_list())
+  filtered_cross_entropy = tf.boolean_mask(cross_entropy_per_pixel,
+                                           no_loss_mask,
+                                           name='no_loss_mask')
+  cross_entropy_mean = tf.reduce_mean(filtered_cross_entropy, name='cross_entropy')
+#  cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
   tf.add_to_collection('losses', cross_entropy_mean)
 
   return tf.add_n(tf.get_collection('losses'), name='total_loss')

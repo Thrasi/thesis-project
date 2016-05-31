@@ -92,7 +92,7 @@ def _generate_image_and_label_batch(image, label, min_queue_examples,
   """
   # Create a queue that shuffles the examples, and then
   # read 'batch_size' images + labels from the example queue.
-  num_preprocess_threads = 10
+  num_preprocess_threads = 1
   if shuffle:
     images, label_batch = tf.train.shuffle_batch(
         [image, label],
@@ -109,6 +109,7 @@ def _generate_image_and_label_batch(image, label, min_queue_examples,
 
   # Display the training images in the visualizer.
   tf.image_summary('images', images)
+  tf.image_summary('masks', label_batch)
   shape = label.get_shape().as_list()
   return images, label_batch # tf.reshape(label_batch, [shape[0], shape[1], batch_size])
 
