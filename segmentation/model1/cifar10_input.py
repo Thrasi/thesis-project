@@ -109,9 +109,9 @@ def _generate_image_and_label_batch(image, label, min_queue_examples,
 
   # Display the training images in the visualizer.
   tf.image_summary('images', images)
-  tf.image_summary('masks', label_batch)
-  shape = label.get_shape().as_list()
-  return images, label_batch # tf.reshape(label_batch, [shape[0], shape[1], batch_size])
+  tf.image_summary('truth', label_batch)
+
+  return images, label_batch 
 
 
 def distorted_inputs(data_dir, batch_size):

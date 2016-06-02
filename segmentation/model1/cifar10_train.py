@@ -46,7 +46,7 @@ def train():
 
     # Get images and labels for a segmentation model.
     images, labels = cifar10.distorted_inputs()
-
+    tf.histogram_summary('label_hist', labels)
     # Build a Graph that computes the logits predictions from the
     # inference model.
     print("before inference")
@@ -63,6 +63,9 @@ def train():
 
     # Create a saver.
     saver = tf.train.Saver(tf.all_variables())
+#    tf.image_summary('images2', images)
+    print (logits)
+#    tf.image_summary('predictions', logits)
 
     # Build the summary operation based on the TF collection of Summaries.
     summary_op = tf.merge_all_summaries()
@@ -82,7 +85,11 @@ def train():
 
     for step in xrange(FLAGS.max_steps):
       start_time = time.time()
-      _, loss_value, accuracy_value, precision_value = sess.run([train_op, loss, accuracy, precision])
+      _, loss_value, accuracy_value, precision_value  = sess.run([train_op,
+                                                                  loss,
+                                                                  accuracy,
+                                                                  precision])
+                                                                  
       # imgs, lbls,_, loss_value = sess.run([images, labels, train_op, loss])
       duration = time.time() - start_time
       # print (accuracy_value)

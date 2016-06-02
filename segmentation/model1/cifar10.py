@@ -307,9 +307,7 @@ def loss(logits, labels):
                                   reshaped_logits, reshaped_labels,
                                   name='cross_entropy_per_pixel')
   no_loss_mask = tf.not_equal(reshaped_labels, -1)
-#  print (reshaped_labels.get_shape().as_list())
-#  print (cross_entropy.get_shape().as_list())
-#  print (no_loss_mask.get_shape().as_list())
+
   filtered_cross_entropy = tf.boolean_mask(cross_entropy_per_pixel,
                                            no_loss_mask,
                                            name='no_loss_mask')
@@ -320,6 +318,12 @@ def loss(logits, labels):
   return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
 def accuracy(logits, labels):
+  def tf_count(t, val):
+    elements_equal_to_value = tf.equal(t, val)
+    as_ints = tf.cast(elements_equal_to_value, tf.int32)
+    count = tf.reduce_sum(as_ints)
+    return count
+  
   labels = tf.cast(labels, tf.int64)
   label_shape = labels.get_shape().as_list()
   reshaped_labels = tf.reshape(labels,
@@ -329,25 +333,52 @@ def accuracy(logits, labels):
   reshaped_logits = tf.reshape(logits,
                               [logits_shape[0]*logits_shape[1]*logits_shape[2],
                               logits_shape[3]])
+
   predictions = tf.argmax(reshaped_logits, dimension=1)
+
+  shaped_predictions = tf.argmax(logits, dimension=3)
+#  counts = [tf_count(shaped_predictions,i) for i in [-1,0,1,2,3,4] ]
+#  strings = ['ignore','zero','one','two','three','four']
+#  for i,s in zip(counts,strings):
+#    tf.scalar_summary('shaped_preds/'+s,i)
+#  print ("shaped_predictions shape")
+#  print (shaped_predictions)
+
   correct_predictions = tf.equal(predictions, reshaped_labels)
   accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name='accuracy')
   tf.add_to_collection('accuracy', accuracy)
 
-  def tf_count(t, val):
-    elements_equal_to_value = tf.equal(t, val)
-    as_ints = tf.cast(elements_equal_to_value, tf.int32)
-    count = tf.reduce_sum(as_ints)
-    return count
+  tf.histogram_summary('predictions_hist', predictions)
 
   human_pred = tf.equal(predictions,1)
   human_truth = tf.equal(reshaped_labels,1)
   non_human_truth = tf.not_equal(reshaped_labels,1)
 
+#  counts2 = [tf_count(predictions,i) for i in [-1,0,1,2,3,4] ]
+#  for i,s in zip(counts2,strings):
+#    tf.scalar_summary('preds/'+s,i)
+#  
+#  first_predictions = shaped_predictions[0:3,:,:]
+#  counts3 = [tf_count(first_predictions,i) for i in [-1,0,1,2,3,4] ]
+#  for i,s in zip(counts3,strings):
+#    tf.scalar_summary('first_preds/'+s,i)
+  
+  imgs_to_summarize = tf.expand_dims(tf.cast(shaped_predictions, 'float32'), -1)
+#  counts4 = [tf_count(imgs_to_summarize,i) for i in [-1,0,1,2,3,4] ]
+#  for i,s in zip(counts4,strings):
+#    tf.scalar_summary('imgs_to_summarize/'+s,i)
+          
+#  print ("imgs_to_suymmarize")
+#  print (imgs_to_summarize)
+  tf.image_summary('predictions', imgs_to_summarize)
+    
+    
   tp = tf.logical_and(human_pred, human_truth)
   tp_count = tf.reduce_sum(tf.cast(tp, "float"))
   fp = tf.logical_and(human_pred, non_human_truth)
   fp_count = tf.reduce_sum(tf.cast(fp, "float"))
+  tf.scalar_summary('human_prec/fp_count', fp_count)
+  tf.scalar_summary('human_prec/tp_count', tp_count)
   
   human_precision = tp_count / (tp_count + fp_count)
   
