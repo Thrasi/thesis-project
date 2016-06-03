@@ -1,5 +1,6 @@
 import tensorflow as tf
 import matplotlib.pyplot as plt
+from matplotlib import colors
 
 def read_and_decode(filename_queue):
   class COCORecord(object):
@@ -26,7 +27,7 @@ def read_and_decode(filename_queue):
   # result.height=64
   shape = tf.pack([result.width,result.height,4])
   # print shape  
-  result.image_and_mask = tf.decode_raw(features['image_and_mask'], tf.uint8)
+  result.image_and_mask = tf.decode_raw(features['image_and_mask'], tf.int16)
   result.image_and_mask = tf.reshape(result.image_and_mask,
                                      shape)
 
@@ -63,6 +64,10 @@ for i in range(200):
   plt.subplot(121)
   plt.imshow(image_and_mask[:,:,:3]/255.)
   plt.subplot(122)
-  plt.imshow(image_and_mask[:,:,3])
+  cmap = colors.ListedColormap(['black', 'blue', 'red'])
+  bounds=[-2,-0.5,0.5,1000]
+  norm = colors.BoundaryNorm(bounds, cmap.N)
+        # plt.imshow(image_with_ignore, cmap=cmap, norm=norm)
+  plt.imshow(image_and_mask[:,:,3], cmap=cmap, norm=norm)
 
   plt.show()
