@@ -340,26 +340,48 @@ def accuracy(logits, labels):
   accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name='accuracy')
   tf.add_to_collection('accuracy', accuracy)
   tf.histogram_summary('predictions_hist', predictions)
-
-  human_pred = tf.equal(predictions,1)
-  human_truth = tf.equal(reshaped_labels,1)
-  non_human_truth = tf.not_equal(reshaped_labels,1)
-  
   imgs_to_summarize = tf.expand_dims(tf.cast(shaped_predictions, 'float32'), -1)
   tf.image_summary('predictions', imgs_to_summarize)
-    
-  tp = tf.logical_and(human_pred, human_truth)
-  tp_count = tf.reduce_sum(tf.cast(tp, "float"))
-  fp = tf.logical_and(human_pred, non_human_truth)
-  fp_count = tf.reduce_sum(tf.cast(fp, "float"))
-  tf.scalar_summary('human_prec/fp_count', fp_count)
-  tf.scalar_summary('human_prec/tp_count', tp_count)
-  
-  human_precision = tp_count / (tp_count + fp_count)
-  
-  tf.add_to_collection('precision',human_precision)
 
-  return accuracy, human_precision
+  cat_names = ["bkg","person", "cat", "couch", "car"]
+  precision = []
+  for cat_id,cat in enumerate(cat_names):
+    cat_pred = tf.equal(predictions, cat_id, name=cat+"_pred")
+    cat_truth = tf.equal(reshaped_labels, cat_id, name=cat+"_truth")
+    non_cat_truth = tf.not_equal(reshaped_labels, cat_id, name=cat+"_non_truth")
+      
+    tp = tf.logical_and(cat_pred, cat_truth, name=cat+"_tp")
+    tp_count = tf.reduce_sum(tf.cast(tp, "float"), name=cat+"_tp_count")
+    fp = tf.logical_and(cat_pred, non_cat_truth, name=cat+"_fp")
+    fp_count = tf.reduce_sum(tf.cast(fp, "float"), name=cat+"_fp_count")
+
+    tf.scalar_summary('cat_precisions/'+cat+'_fp_count', fp_count)
+    tf.scalar_summary('cat_precisions/'+cat+'_tp_count', tp_count)
+  
+    precision.append( tp_count / (tp_count + fp_count) )
+  
+#    tf.add_to_collection('precision',human_precision)
+    
+  precisions = tf.pack(precision)  
+#  human_pred = tf.equal(predictions,1)
+#  human_truth = tf.equal(reshaped_labels,1)
+#  non_human_truth = tf.not_equal(reshaped_labels,1)
+#  
+#  imgs_to_summarize = tf.expand_dims(tf.cast(shaped_predictions, 'float32'), -1)
+#  tf.image_summary('predictions', imgs_to_summarize)
+#    
+#  tp = tf.logical_and(human_pred, human_truth)
+#  tp_count = tf.reduce_sum(tf.cast(tp, "float"))
+#  fp = tf.logical_and(human_pred, non_human_truth)
+#  fp_count = tf.reduce_sum(tf.cast(fp, "float"))
+#  tf.scalar_summary('human_prec/fp_count', fp_count)
+#  tf.scalar_summary('human_prec/tp_count', tp_count)
+#  
+#  human_precision = tp_count / (tp_count + fp_count)
+#  
+  tf.add_to_collection('precisions',precisions)
+
+  return accuracy, precisions
 
 def _add_accuracy_precision_summaries(accuracy, precision):
   accuracy_averages = tf.train.ExponentialMovingAverage(0.9, name='avg')

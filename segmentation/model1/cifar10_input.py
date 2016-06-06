@@ -67,14 +67,14 @@ def read_cifar10(filename_queue):
 
   result.height = tf.cast(features['height'], tf.int32)
   result.width = tf.cast(features['width'], tf.int32)
-  shape = tf.pack([result.width,result.height,4])
+  shape = tf.pack([result.width,result.height,5])
   result.image_and_mask = tf.decode_raw(features['image_and_mask'], tf.int16)
   result.image_and_mask = tf.reshape(result.image_and_mask, shape)
 
   return result
 
 
-def _generate_image_and_label_batch(image, label, min_queue_examples,
+def _generate_image_and_label_batch(image, label_with_ignore, label, min_queue_examples,
                                     batch_size, shuffle):
   """Construct a queued batch of images and labels.
 
@@ -94,15 +94,15 @@ def _generate_image_and_label_batch(image, label, min_queue_examples,
   # read 'batch_size' images + labels from the example queue.
   num_preprocess_threads = 1
   if shuffle:
-    images, label_batch = tf.train.shuffle_batch(
-        [image, label],
+    images, label_with_ignore_batch, label_batch = tf.train.shuffle_batch(
+        [image, label_with_ignore, label],
         batch_size=batch_size,
         num_threads=num_preprocess_threads,
         capacity=min_queue_examples + 3 * batch_size,
         min_after_dequeue=min_queue_examples)
   else:
-    images, label_batch = tf.train.batch(
-        [image, label],
+    images, label_with_ignore_batch, label_batch = tf.train.batch(
+        [image, label_with_ignore, label],
         batch_size=batch_size,
         num_threads=num_preprocess_threads,
         capacity=min_queue_examples + 3 * batch_size)
@@ -110,8 +110,9 @@ def _generate_image_and_label_batch(image, label, min_queue_examples,
   # Display the training images in the visualizer.
   tf.image_summary('images', images)
   tf.image_summary('truth', label_batch)
+  tf.image_summary('truth_with_ignore', label_with_ignore_batch)
 
-  return images, label_batch 
+  return images, label_with_ignore_batch, label_batch 
 
 
 def distorted_inputs(data_dir, batch_size):
@@ -148,15 +149,18 @@ def distorted_inputs(data_dir, batch_size):
   # Randomly crop a [height, width] section of the image.
 
   distorted_image = reshaped_image
-  distorted_image = tf.random_crop(distorted_image, [height, width, 4])
+  distorted_image = tf.random_crop(distorted_image, [height, width, 5])
 
 
   # Randomly flip the image horizontally.
   distorted_image = tf.image.random_flip_left_right(distorted_image)
 
   # Separate the image and mask.
-  label = distorted_image[0:width,0:height,3:]
+  label_with_ignore = distorted_image[0:width,0:height,3:4]
+  label =  distorted_image[0:width,0:height,4:]
   distorted_image = distorted_image[0:width,0:height,0:3]
+
+  
 
   # Because these operations are not commutative, consider randomizing
   # the order their operation.
@@ -176,7 +180,7 @@ def distorted_inputs(data_dir, batch_size):
          'This will take a few minutes.' % min_queue_examples)
 
   # Generate a batch of images and labels by building up a queue of examples.
-  return _generate_image_and_label_batch(float_image, label,
+  return _generate_image_and_label_batch(float_image, label_with_ignore, label, 
                                          min_queue_examples, batch_size,
                                          shuffle=True)
 
@@ -225,7 +229,8 @@ def inputs(eval_data, data_dir, batch_size):
   #                                                        width, height)
   resized_image = reshaped_image
 
-  label = tf.cast(resized_image[0:width,0:height,3:4], "int32")
+  label_with_ignore = tf.cast(resized_image[0:width,0:height,3:4], "int32")
+  label = tf.cast(resized_image[0:width,0:height,4:], "int32")
   resized_image = resized_image[0:width,0:height,0:3]
 
   # Subtract off the mean and divide by the variance of the pixels.
@@ -239,6 +244,6 @@ def inputs(eval_data, data_dir, batch_size):
                            min_fraction_of_examples_in_queue)
 
   # Generate a batch of images and labels by building up a queue of examples.
-  return _generate_image_and_label_batch(float_image, label,
+  return _generate_image_and_label_batch(float_image, label_with_ignore, label,
                                          min_queue_examples, batch_size,
                                          shuffle=True)

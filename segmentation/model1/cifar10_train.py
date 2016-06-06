@@ -45,8 +45,10 @@ def train():
     global_step = tf.Variable(0, trainable=False)
 
     # Get images and labels for a segmentation model.
-    images, labels = cifar10.distorted_inputs()
-    tf.histogram_summary('label_hist', labels)
+    images, labels, ground_truth = cifar10.distorted_inputs()
+    tf.histogram_summary('label_hist/with_ignore', labels)
+    tf.histogram_summary('label_hist/ground_truth', ground_truth)
+    
     # Build a Graph that computes the logits predictions from the
     # inference model.
     print("before inference")
@@ -55,7 +57,7 @@ def train():
     print("after inference")
     # Calculate loss.
     loss = cifar10.loss(logits, labels)
-    accuracy, precision = cifar10.accuracy(logits, labels)
+    accuracy, precision = cifar10.accuracy(logits, ground_truth)
 
     # Build a Graph that trains the model with one batch of examples and
     # updates the model parameters.
@@ -104,19 +106,22 @@ def train():
       # plt.subplot(122)
       # plt.imshow(lbls[0,:,:,0])
       # plt.show()
-
+      print (precision_value)
+      
       assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
 
+      precision_value = [0 if np.isnan(p) else p for p in precision_value]
+      print (precision_value)
       if step % 10 == 0:
         num_examples_per_step = FLAGS.batch_size
         examples_per_sec = num_examples_per_step / duration
         sec_per_batch = float(duration)
 
         format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
-                      'sec/batch)\n Accuracy = %.4f, human average precision = %.4f')
+                      'sec/batch)\n Accuracy = %.4f, mean average precision = %.4f')
         print (format_str % (datetime.now(), step, loss_value,
                              examples_per_sec, sec_per_batch,
-                             accuracy_value, precision_value))
+                             accuracy_value, np.mean(precision_value)))
 
       if step % 100 == 0:
         summary_str = sess.run(summary_op)
@@ -124,7 +129,9 @@ def train():
 
         summary = tf.Summary()
         summary.value.add(tag='Accuracy (raw)', simple_value=float(accuracy_value))
-        summary.value.add(tag='Human precision (raw)', simple_value=float(precision_value))
+        for i,s in enumerate(["bkg", "person", "cat", "couch", "car"]):
+          summary.value.add(tag="precision/"+s+" (raw)",simple_value=float(precision_value[i]))
+#        summary.value.add(tag='Human precision (raw)', simple_value=float(precision_value))
         summary_writer.add_summary(summary, step)
         print("hundred steps")
       # Save the model checkpoint periodically.
