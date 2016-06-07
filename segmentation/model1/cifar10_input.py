@@ -30,9 +30,14 @@ import tensorflow as tf
 IMAGE_SIZE = 64
 
 # Global constants describing the CIFAR-10 data set.
-NUM_CLASSES = 5
+NUM_CLASSES = 4
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 67652
 NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 1000
+
+FLAGS = tf.app.flags.FLAGS
+
+tf.app.flags.DEFINE_string('training_data', 'coco64by64train.tfrecords',
+                           """Name of training data file """)
 
 def read_cifar10(filename_queue):
   """Reads and parses examples from COCO data files.
@@ -127,7 +132,7 @@ def distorted_inputs(data_dir, batch_size):
     labels: Labels. 3D tensor of [batch_size, IMAGE_SIZE, IMAGE_SIZE] size.
   """
 
-  filenames = [os.path.join(data_dir, "coco64by64train.tfrecords")]
+  filenames = [os.path.join(data_dir, FLAGS.training_data)]
 
   for f in filenames:
     if not tf.gfile.Exists(f):

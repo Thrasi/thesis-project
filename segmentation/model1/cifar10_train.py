@@ -30,13 +30,17 @@ import matplotlib.pyplot as plt
 
 FLAGS = tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_string('train_dir', '/home/magnus/thesis-project/segmentation/model1/train',
-                           """Directory where to write event logs """
-                           """and checkpoint.""")
-tf.app.flags.DEFINE_integer('max_steps', 1000000,
+tf.app.flags.DEFINE_string('train_dir', 
+                            os.path.join(FLAGS.root_dir,'model1/train'),
+                            """Directory where to write event logs """
+                            """and checkpoint.""")
+tf.app.flags.DEFINE_integer('max_steps', 
+                            1000000,
                             """Number of batches to run.""")
-tf.app.flags.DEFINE_boolean('log_device_placement', False,
+tf.app.flags.DEFINE_boolean('log_device_placement', 
+                            False,
                             """Whether to log device placement.""")
+CLASSES = ["bkg", "person", "chair", "car"]
 
 
 def train():
@@ -129,7 +133,7 @@ def train():
 
         summary = tf.Summary()
         summary.value.add(tag='Accuracy (raw)', simple_value=float(accuracy_value))
-        for i,s in enumerate(["bkg", "person", "cat", "couch", "car"]):
+        for i,s in enumerate(CLASSES):
           summary.value.add(tag="precision/"+s+" (raw)",simple_value=float(precision_value[i]))
 #        summary.value.add(tag='Human precision (raw)', simple_value=float(precision_value))
         summary_writer.add_summary(summary, step)

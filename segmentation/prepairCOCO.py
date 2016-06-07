@@ -279,11 +279,11 @@ def load_ann_file(ann_file_path):
 
 
 if __name__=='__main__':
-  ["chair"]
   dataset = "val"
-  FILE_PATH = "/home/mb/Documents/kth/thesis-project/segmentation/coco/images/"+dataset+"2014"
-  ANN_FILE_PATH = "/home/mb/Documents/kth/thesis-project/segmentation/coco/annotations/instances_"+dataset+"2014.json"
-  TF_RECORD_PATH ="/home/mb/Documents/kth/thesis-project/segmentation/coco64by64"+dataset+".tfrecords"
+  root_path = "/home/mb/Documents/kth/thesis-project/segmentation"
+  FILE_PATH = os.path.join(root_path,"coco/images/"+dataset+"2014")
+  ANN_FILE_PATH = os.path.join(root_path, "coco/annotations/instances_"+dataset+"2014.json")
+  TF_RECORD_PATH =os.path.join(root_path, "coco64by64"+dataset+".tfrecords")
   CATEGORIES = ["person", "car", "chair"]
   # read_files(FILE_PATH)
   # ANNOTATION_FILE = "../annotations/instances_val2014.json"

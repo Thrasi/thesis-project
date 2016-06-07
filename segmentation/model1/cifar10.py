@@ -54,8 +54,11 @@ FLAGS = tf.app.flags.FLAGS
 # Basic model parameters.
 tf.app.flags.DEFINE_integer('batch_size', 128,
                             """Number of images to process in a batch.""")
-tf.app.flags.DEFINE_string('data_dir', '/home/magnus/thesis-project/segmentation/data',
+tf.app.flags.DEFINE_string('root_dir', '/home/mb/Documents/kth/thesis-project/segmentation',
+                            """Root directory of the segmentation task""")
+tf.app.flags.DEFINE_string('data_dir', os.path.join(FLAGS.root_dir,'data'),
                            """Path to the my data directory.""")
+CLASSES = ["bkg", "person", "chair", "car"]
 
 # Global constants describing the my data set.
 IMAGE_SIZE = cifar10_input.IMAGE_SIZE
@@ -343,7 +346,7 @@ def accuracy(logits, labels):
   imgs_to_summarize = tf.expand_dims(tf.cast(shaped_predictions, 'float32'), -1)
   tf.image_summary('predictions', imgs_to_summarize)
 
-  cat_names = ["bkg","person", "cat", "couch", "car"]
+  cat_names = CLASSES
   precision = []
   for cat_id,cat in enumerate(cat_names):
     cat_pred = tf.equal(predictions, cat_id, name=cat+"_pred")

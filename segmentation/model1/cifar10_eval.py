@@ -28,11 +28,11 @@ import cifar10
 
 FLAGS = tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_string('eval_dir', '/home/magnus/thesis-project/segmentation/model1/eval',
+tf.app.flags.DEFINE_string('eval_dir', os.path.join(FLAGS.root_dir,'model1/eval'),
                            """Directory where to write event logs.""")
 tf.app.flags.DEFINE_string('eval_data', 'test',
                            """Either 'test' or 'train_eval'.""")
-tf.app.flags.DEFINE_string('checkpoint_dir', '/home/magnus/thesis-project/segmentation/model1/train',
+tf.app.flags.DEFINE_string('checkpoint_dir', os.path.join(FLAGS.root_dir,'model1/train'),
                            """Directory where to read model checkpoints.""")
 tf.app.flags.DEFINE_integer('eval_interval_secs', 60*5 ,
                             """How often to run the eval.""")
