@@ -54,7 +54,7 @@ FLAGS = tf.app.flags.FLAGS
 # Basic model parameters.
 tf.app.flags.DEFINE_integer('batch_size', 128,
                             """Number of images to process in a batch.""")
-tf.app.flags.DEFINE_string('data_dir', '/home/mb/Documents/kth/thesis-project/segmentation/data',
+tf.app.flags.DEFINE_string('data_dir', '/home/magnus/thesis-project/segmentation/data',
                            """Path to the my data directory.""")
 
 # Global constants describing the my data set.
@@ -68,7 +68,8 @@ DECAY_RATE = 5e-4
 MOVING_AVERAGE_DECAY = 0.9999     # The decay to use for the moving average.
 NUM_EPOCHS_PER_DECAY = 350.0      # Epochs after which learning rate decays.
 LEARNING_RATE_DECAY_FACTOR = 0.1  # Learning rate decay factor.
-INITIAL_LEARNING_RATE = 0.0001       # Initial learning rate.
+INITIAL_LEARNING_RATE = 0.0005       # Initial learning rate.
+
 
 # If a model is trained with multiple GPUs, prefix all Op names with tower_name
 # to differentiate the operations. Note that this prefix is removed from the
@@ -302,17 +303,27 @@ def loss(logits, labels):
   reshaped_logits = tf.reshape(logits,
                               [logits_shape[0]*logits_shape[1]*logits_shape[2],
                               logits_shape[3]]) 
-  cross_entropy = tf.reduce_mean(
-                          tf.nn.sparse_softmax_cross_entropy_with_logits(
-                          reshaped_logits, reshaped_labels), 
-                          name='cross_entropy_per_example')
+  cross_entropy_per_pixel = tf.nn.sparse_softmax_cross_entropy_with_logits(
+                                  reshaped_logits, reshaped_labels,
+                                  name='cross_entropy_per_pixel')
+  no_loss_mask = tf.not_equal(reshaped_labels, -1)
 
-  cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
+  filtered_cross_entropy = tf.boolean_mask(cross_entropy_per_pixel,
+                                           no_loss_mask,
+                                           name='no_loss_mask')
+  cross_entropy_mean = tf.reduce_mean(filtered_cross_entropy, name='cross_entropy')
+#  cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
   tf.add_to_collection('losses', cross_entropy_mean)
 
   return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
 def accuracy(logits, labels):
+  def tf_count(t, val):
+    elements_equal_to_value = tf.equal(t, val)
+    as_ints = tf.cast(elements_equal_to_value, tf.int32)
+    count = tf.reduce_sum(as_ints)
+    return count
+  
   labels = tf.cast(labels, tf.int64)
   label_shape = labels.get_shape().as_list()
   reshaped_labels = tf.reshape(labels,
@@ -322,33 +333,55 @@ def accuracy(logits, labels):
   reshaped_logits = tf.reshape(logits,
                               [logits_shape[0]*logits_shape[1]*logits_shape[2],
                               logits_shape[3]])
+
   predictions = tf.argmax(reshaped_logits, dimension=1)
+  shaped_predictions = tf.argmax(logits, dimension=3)
   correct_predictions = tf.equal(predictions, reshaped_labels)
   accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name='accuracy')
   tf.add_to_collection('accuracy', accuracy)
+  tf.histogram_summary('predictions_hist', predictions)
+  imgs_to_summarize = tf.expand_dims(tf.cast(shaped_predictions, 'float32'), -1)
+  tf.image_summary('predictions', imgs_to_summarize)
 
-  def tf_count(t, val):
-    elements_equal_to_value = tf.equal(t, val)
-    as_ints = tf.cast(elements_equal_to_value, tf.int32)
-    count = tf.reduce_sum(as_ints)
-    return count
+  cat_names = ["bkg","person", "cat", "couch", "car"]
+  precision = []
+  for cat_id,cat in enumerate(cat_names):
+    cat_pred = tf.equal(predictions, cat_id, name=cat+"_pred")
+    cat_truth = tf.equal(reshaped_labels, cat_id, name=cat+"_truth")
+    non_cat_truth = tf.not_equal(reshaped_labels, cat_id, name=cat+"_non_truth")
+      
+    tp = tf.logical_and(cat_pred, cat_truth, name=cat+"_tp")
+    tp_count = tf.reduce_sum(tf.cast(tp, "float"), name=cat+"_tp_count")
+    fp = tf.logical_and(cat_pred, non_cat_truth, name=cat+"_fp")
+    fp_count = tf.reduce_sum(tf.cast(fp, "float"), name=cat+"_fp_count")
 
-  human_pred = tf.equal(predictions,1)
-  human_truth = tf.equal(reshaped_labels,1)
-  non_human_truth = tf.not_equal(reshaped_labels,1)
-
-  tp = tf.logical_and(human_pred, human_truth)
-  tp_count = tf.reduce_sum(tf.cast(tp, "float"))
-  fp = tf.logical_and(human_pred, human_truth)
-  fp_count = tf.reduce_sum(tf.cast(fp, "float"))
+    tf.scalar_summary('cat_precisions/'+cat+'_fp_count', fp_count)
+    tf.scalar_summary('cat_precisions/'+cat+'_tp_count', tp_count)
   
-  human_precision = tp_count / (tp_count + fp_count)
+    precision.append( tp_count / (tp_count + fp_count) )
   
-  tf.add_to_collection('precision',human_precision)
+#    tf.add_to_collection('precision',human_precision)
+    
+  precisions = tf.pack(precision)  
+#  human_pred = tf.equal(predictions,1)
+#  human_truth = tf.equal(reshaped_labels,1)
+#  non_human_truth = tf.not_equal(reshaped_labels,1)
+#  
+#  imgs_to_summarize = tf.expand_dims(tf.cast(shaped_predictions, 'float32'), -1)
+#  tf.image_summary('predictions', imgs_to_summarize)
+#    
+#  tp = tf.logical_and(human_pred, human_truth)
+#  tp_count = tf.reduce_sum(tf.cast(tp, "float"))
+#  fp = tf.logical_and(human_pred, non_human_truth)
+#  fp_count = tf.reduce_sum(tf.cast(fp, "float"))
+#  tf.scalar_summary('human_prec/fp_count', fp_count)
+#  tf.scalar_summary('human_prec/tp_count', tp_count)
+#  
+#  human_precision = tp_count / (tp_count + fp_count)
+#  
+  tf.add_to_collection('precisions',precisions)
 
-  # accuracy_op, human_precision_op = _add_accuracy_precision_summaries(accuracy, human_precision)
-
-  return accuracy, human_precision
+  return accuracy, precisions
 
 def _add_accuracy_precision_summaries(accuracy, precision):
   accuracy_averages = tf.train.ExponentialMovingAverage(0.9, name='avg')
@@ -426,7 +459,13 @@ def train(total_loss, global_step):
 
   # Compute gradients.
   with tf.control_dependencies([loss_averages_op]):
-    opt = tf.train.GradientDescentOptimizer(lr)
+    # opt = tf.train.GradientDescentOptimizer(lr)
+    opt = tf.train.AdamOptimizer(learning_rate=0.0001,
+                                       beta1=0.9,
+                                       beta2=0.999,
+                                       epsilon=1e-08,
+                                       use_locking=False,
+                                       name='Adam')#.minimize(loss,global_step=batch)
     grads = opt.compute_gradients(total_loss)
 
   # Apply gradients.
