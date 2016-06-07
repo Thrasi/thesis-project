@@ -25,7 +25,7 @@ def read_and_decode(filename_queue):
 
   # result.width  =64
   # result.height=64
-  shape = tf.pack([result.width,result.height,4])
+  shape = tf.pack([result.width,result.height,5])
   # print shape  
   result.image_and_mask = tf.decode_raw(features['image_and_mask'], tf.int16)
   result.image_and_mask = tf.reshape(result.image_and_mask,
@@ -42,7 +42,7 @@ def read_and_decode(filename_queue):
   # result.mask = tf.reshape(result.mask, [64,64])
   return result
 
-filenames = ["/home/mb/Documents/kth/thesis-project/segmentation/coco64by64val.tfrecords"]
+filenames = ["/home/mb/Documents/kth/thesis-project/segmentation/coco64by64train.tfrecords"]
 filename_queue = tf.train.string_input_producer(filenames)
 result = read_and_decode(filename_queue)
 init_op = tf.initialize_all_variables()
@@ -61,13 +61,16 @@ for i in range(200):
   # plt.imshow(image)
   # plt.subplot(222)
   # plt.imshow(mask)
-  plt.subplot(121)
+  plt.subplot(131)
   plt.imshow(image_and_mask[:,:,:3]/255.)
-  plt.subplot(122)
-  cmap = colors.ListedColormap(['black', 'blue', 'red'])
-  bounds=[-2,-0.5,0.5,1000]
+  plt.subplot(132)
+  cmap = colors.ListedColormap(['black', 'blue', 'red', 'green', 'cyan', 'yellow'])
+  bounds=[-2,-0.5,0.5,1.5,2.5,3.5,1000]
   norm = colors.BoundaryNorm(bounds, cmap.N)
         # plt.imshow(image_with_ignore, cmap=cmap, norm=norm)
   plt.imshow(image_and_mask[:,:,3], cmap=cmap, norm=norm)
+
+  plt.subplot(133)
+  plt.imshow(image_and_mask[:,:,4], cmap=cmap, norm=norm)
 
   plt.show()

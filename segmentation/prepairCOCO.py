@@ -79,10 +79,9 @@ def get_crops(img, annotations, image, ground_truth, categoryIds):
   image and the ground truth of that crop"""
   count = 0
   crops = []
-  # plt.subplot(5,5,1)
-  # plt.imshow(image)
-  # plt.subplot(5,5,2)
-  # plt.imshow(ground_truth)
+  counts = {cat_id:0 for cat_id in categoryIds}
+  unique_counts = {cat_id:0 for cat_id in categoryIds}
+  cats = []
   index = 3
   for annotation in annotations:
     bbox = annotation['bbox']
@@ -90,27 +89,22 @@ def get_crops(img, annotations, image, ground_truth, categoryIds):
     LOWER = int(FIELD*L_SCALE)
     UPPER = FIELD*U_SCALE
     if LOWER < bbox[2] < UPPER and LOWER < bbox[3] < UPPER:
-      # if index <= 25:
-      #   plt.subplot(5,5,index)
       index+=1
       bbox=map(int,bbox)
-      # if index <= 25:
-      #   # print image.shape
-      #   plt.imshow(image[bbox[1]:bbox[1]+bbox[3],bbox[0]:bbox[0]+bbox[2],:])
       count+=1
       # print number_of_crops
       ground = get_ground_truth_mask(coco, [annotation], categoryIds)
-      
+      cat = annotation['category_id']
       ignore_class = ground != ground_truth
 
       image_with_ignore = ground_truth.copy()
 
       image_with_ignore[ignore_class] = -1
       # print np.max(image_with_ignore)
-      print np.unique(ground_truth)
-      print np.unique(ground)
-      print np.unique(ignore_class)
-      print np.unique(image_with_ignore)
+      # print np.unique(ground_truth)
+      # print np.unique(ground)
+      # print np.unique(ignore_class)
+      # print np.unique(image_with_ignore)
       # print image_with_ignore.dtype
       # plt.subplot(231)
       # plt.imshow(image)
@@ -127,33 +121,33 @@ def get_crops(img, annotations, image, ground_truth, categoryIds):
       # plt.imshow(image_with_ignore, cmap=cmap, norm=norm)
       # plt.imshow(image_with_ignore,cmap="hot")
 
-      plt.show()
-
+      # plt.show()
+      cropped = False
       for c in xrange(number_of_crops):
         col, row = sample_coords(bbox, img)
         img_crop = image[col:col+FIELD, row:row+FIELD, :]
 
         # mask_crop = ground_truth[col:col+FIELD, row:row+FIELD]
-        mask_crop = image_with_ignore[col:col+FIELD, row:row+FIELD]
+        mask_crop_with_ignore = image_with_ignore[col:col+FIELD, row:row+FIELD]
+        mask_crop_with_ignore = np.expand_dims(mask_crop_with_ignore, axis=2)
+
+        mask_crop = ground_truth[col:col+FIELD, row:row+FIELD]
         mask_crop = np.expand_dims(mask_crop, axis=2)
 
-        # ignore_crop = 
-
-        masked_pixels = np.sum(mask_crop > 0)
-        size = mask_crop.shape[0]*mask_crop.shape[1]
+        masked_pixels = np.sum(mask_crop_with_ignore > 0)
+        size = mask_crop_with_ignore.shape[0]*mask_crop_with_ignore.shape[1]
+        
         if 0.2 < masked_pixels/float(size) < 0.8:
-          crops.append([img_crop, mask_crop])
+          crops.append([img_crop, mask_crop_with_ignore, mask_crop])
+          counts[cat] += 1
+          cropped = True
+      if cropped:
+        unique_counts[cat] += 1
+      # for cat in categoryIds:
+      #   if counts[cat] > 0:
+      #     unique_counts[cat] += 1
           
-
-        # if index <= 24:
-        #   plt.subplot(5,5, index)
-        #   index+=1
-        #   plt.imshow(img_crop)
-        #   plt.subplot(5,5, index)
-        #   index+=1
-        #   plt.imshow(mask_crop)
-  # plt.show()
-  return count, crops
+  return count, crops, counts, unique_counts
 
 def label_mask_categories(masks, categoryIds):
   for i,c in enumerate(categoryIds):
@@ -179,20 +173,23 @@ def _int64_feature(value):
 def test(coco, categories, path_to_files , output_file):
   writer = tf.python_io.TFRecordWriter(output_file)
   categoryIds = coco.getCatIds(catNms=categories)
+  total_counts = {cat_id:0 for cat_id in categoryIds}
+  total_unique_counts = {cat_id:0 for cat_id in categoryIds}
   imgIds = []
   count = 0
   nr_crops = 0
   for i,cid in enumerate(categoryIds):
     ids = coco.getImgIds(catIds=cid)
     imgIds.extend(ids)
-    print "category: {} has {} images".format(i,len(ids))
+    print "category: {} has {} images, {}".format(cid,len(ids), categories[i])
   imgIds = list(set(imgIds))
   print "number of imageIds: {}".format(len(imgIds))
   random.shuffle(imgIds)
   n=1
   number_of_drops = 0
   total_crops_written = 0
-  for imgId in imgIds[:200]:
+  for imgId in imgIds:
+    # print n
     if n%1000==0:
       print "processed {} images".format(n)
     n+=1
@@ -207,14 +204,20 @@ def test(coco, categories, path_to_files , output_file):
     if len(image.shape) < 3:
       # print "2 D"
       continue
-    c, crops = get_crops(img, annotations, image, mask, categoryIds)
+    c, crops, counts, unique_counts = get_crops(img, annotations, image, mask, categoryIds)
     # show_bboxes(img, annotations, image, mask)
+    for cat in categoryIds:
+      total_counts[cat] += counts[cat]
+      total_unique_counts[cat] += unique_counts[cat]
     nr_crops+=len(crops)
     count+=c
     for crop in crops:
-      image_raw = crop[0].tostring() 
-      mask = crop[1].tostring()
-      image_and_mask = np.concatenate((crop[0], crop[1]), axis=2)#,dtype='uint8')#.astype('uint8')
+      # image_raw = crop[0].tostring() 
+      # mask = crop[1].tostring()
+      # print crop[0].shape
+      # print crop[1].shape
+      # print crop[2].shape
+      image_and_mask = np.concatenate((crop[0], crop[1], crop[2]), axis=2)#,dtype='uint8')#.astype('uint8')
       image_and_mask = image_and_mask.astype('int16')
       # print np.min(crop[1])
       # print np.max(crop[1])
@@ -250,6 +253,10 @@ def test(coco, categories, path_to_files , output_file):
   print "nr of crops: {}".format(nr_crops)
   print "nr of drops: {}".format(number_of_drops)
   print "nr of written crops: {}".format(total_crops_written)
+  print total_counts
+  print total_unique_counts
+  print categories
+  print categoryIds
 
 
   return count
@@ -272,16 +279,23 @@ def load_ann_file(ann_file_path):
 
 
 if __name__=='__main__':
-  ["person", "cat", "couch", "car"]
-  dataset = "train"
+  ["chair"]
+  dataset = "val"
   FILE_PATH = "/home/mb/Documents/kth/thesis-project/segmentation/coco/images/"+dataset+"2014"
   ANN_FILE_PATH = "/home/mb/Documents/kth/thesis-project/segmentation/coco/annotations/instances_"+dataset+"2014.json"
   TF_RECORD_PATH ="/home/mb/Documents/kth/thesis-project/segmentation/coco64by64"+dataset+".tfrecords"
-  CATEGORIES = ["person", "cat", "couch", "car"]
+  CATEGORIES = ["person", "car", "chair"]
   # read_files(FILE_PATH)
   # ANNOTATION_FILE = "../annotations/instances_val2014.json"
   # prepare(ANNOTATION_FILE)
   coco = load_ann_file(ANN_FILE_PATH)
+  # CATEGORIES = []
+  # for i in range(1, len(coco.cats)+1):
+  #   try:
+  #     CATEGORIES.append(coco.cats[i]['name'])
+  #   except:
+  #     pass
+
 
   count = test(coco, CATEGORIES, FILE_PATH, TF_RECORD_PATH)
   print "number of samples: {}".format(count)
