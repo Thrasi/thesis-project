@@ -31,8 +31,8 @@ IMAGE_SIZE = 64
 
 # Global constants describing the CIFAR-10 data set.
 NUM_CLASSES = 4
-NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 67652
-NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 1000
+NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 74404
+NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 36065
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -97,7 +97,7 @@ def _generate_image_and_label_batch(image, label_with_ignore, label, min_queue_e
   """
   # Create a queue that shuffles the examples, and then
   # read 'batch_size' images + labels from the example queue.
-  num_preprocess_threads = 1
+  num_preprocess_threads = 4
   if shuffle:
     images, label_with_ignore_batch, label_batch = tf.train.shuffle_batch(
         [image, label_with_ignore, label],
@@ -234,8 +234,8 @@ def inputs(eval_data, data_dir, batch_size):
   #                                                        width, height)
   resized_image = reshaped_image
 
-  label_with_ignore = tf.cast(resized_image[0:width,0:height,3:4], "int32")
-  label = tf.cast(resized_image[0:width,0:height,4:], "int32")
+  label_with_ignore = resized_image[0:width,0:height,3:4]
+  label = resized_image[0:width,0:height,4:5]
   resized_image = resized_image[0:width,0:height,0:3]
 
   # Subtract off the mean and divide by the variance of the pixels.

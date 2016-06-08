@@ -20,6 +20,7 @@ from __future__ import print_function
 from datetime import datetime
 import math
 import time
+import os
 
 import numpy as np
 import tensorflow as tf
@@ -34,15 +35,16 @@ tf.app.flags.DEFINE_string('eval_data', 'test',
                            """Either 'test' or 'train_eval'.""")
 tf.app.flags.DEFINE_string('checkpoint_dir', os.path.join(FLAGS.root_dir,'model1/train'),
                            """Directory where to read model checkpoints.""")
-tf.app.flags.DEFINE_integer('eval_interval_secs', 60*5 ,
+tf.app.flags.DEFINE_integer('eval_interval_secs', 60*10 ,
                             """How often to run the eval.""")
 tf.app.flags.DEFINE_integer('num_examples', 10000,
                             """Number of examples to run.""")
 tf.app.flags.DEFINE_boolean('run_once', False,
                          """Whether to run eval only once.""")
+CLASSES = ["bkg", "person", "chair", "car"]
 
 
-def eval_once(saver, summary_writer, top_k_op, summary_op, accuracy, human_precision):
+def eval_once(saver, summary_writer, summary_op, accuracy, precision, accuracies):
   """Run Eval once.
 
   Args:
@@ -77,26 +79,37 @@ def eval_once(saver, summary_writer, top_k_op, summary_op, accuracy, human_preci
       total_sample_count = num_iter * FLAGS.batch_size
       step = 0
       acc = 0
-      prec = 0
+      prec = [0 for i in range(len(CLASSES))]
+      cat_acc = [0 for i in range(len(CLASSES))]
+      print ("while loop")
       while step < num_iter and not coord.should_stop():
-        print ("while loop")
-        predictions, acc_val, hp_val = sess.run([top_k_op, accuracy, human_precision])
-        true_count += np.sum(predictions)
+        acc_val, prec_val, cat_acc_val = sess.run([accuracy, precision, accuracies])
+        #true_count += np.sum(predictions)
         acc += acc_val
-        prec += hp_val
+        for i in xrange(len(prec)):
+          prec[i] += prec_val[i]
+          cat_acc[i] += cat_acc_val[i]
+#        prec += hp_val
         step += 1
       print("passed while loop")
       # Compute precision @ 1.
-      prec = prec / float(step)
+      prec = [ p / float(step) for p in prec ]
+      cat_acc = [ a / float(step) for a in cat_acc ]
       acc = acc / float(step)
-      precision = true_count / total_sample_count
-      print('%s: precision @ 1 = %.3f\n    accuracy = %.3f\n human precision = %.3f' % (datetime.now(), precision, acc, prec))
+      #precision = true_count / total_sample_count
+      print('%s: precision @ 1 = %.3f\n    accuracy = %.3f\n ' % (datetime.now(), 0, acc))
+      print (prec)
+      print(cat_acc)
 
       summary = tf.Summary()
       summary.ParseFromString(sess.run(summary_op))
-      summary.value.add(tag='Precision @ 1', simple_value=precision)
+#      summary.value.add(tag='Precision @ 1', simple_value=precision)
       summary.value.add(tag='Accuracy', simple_value=acc)
-      summary.value.add(tag='Human precision', simple_value=prec)
+      for i,s in enumerate(CLASSES):
+        summary.value.add(tag="precision/"+s+" (raw)",simple_value=float(prec[i]))
+        summary.value.add(tag="accuracies/"+s+" (raw)",simple_value=float(cat_acc[i]))
+#      summary.value.add(tag='Human precision', simple_value=prec)
+
       summary_writer.add_summary(summary, global_step)
     except Exception as e:  # pylint: disable=broad-except
       coord.request_stop(e)
@@ -111,13 +124,15 @@ def evaluate():
     # Get images and labels for CIFAR-10.
     eval_data = FLAGS.eval_data == 'test'
     print (eval_data)
-    images, labels = cifar10.inputs(eval_data=eval_data)
+    images, labels, ground_truth = cifar10.inputs(eval_data=eval_data)
     # Build a Graph that computes the logits predictions from the
     # inference model.
-    logits = cifar10.inference(images)
+    logits, _ = cifar10.inference(images)
+    print(logits)
+    print(logits.get_shape())
     print("after inference node creation")
     loss = cifar10.loss(logits, labels)
-    accuracy, precision = cifar10.accuracy(logits, labels)
+    accuracy, precision, accuracies = cifar10.accuracy(logits, ground_truth)
     labels = tf.cast(labels, tf.int64)
 
     label_shape = labels.get_shape().as_list()
@@ -130,7 +145,7 @@ def evaluate():
 
     # Calculate predictions.
     # top_k_op = tf.nn.in_top_k(logits, labels, 1)
-    top_k_op = tf.nn.in_top_k(reshaped_logits, reshaped_labels, 1)
+    #top_k_op = tf.nn.in_top_k(reshaped_logits, reshaped_labels, 1)
 
     # Restore the moving average version of the learned variables for eval.
     variable_averages = tf.train.ExponentialMovingAverage(
@@ -145,19 +160,25 @@ def evaluate():
 
     while True:
       print("evaluate:")
-      eval_once(saver, summary_writer, top_k_op, summary_op, accuracy, precision)
+      eval_once(saver, summary_writer, summary_op, accuracy, precision, accuracies)
       if FLAGS.run_once:
         break
       time.sleep(FLAGS.eval_interval_secs)
 
 
 def main(argv=None):  # pylint: disable=unused-argument
-  # cifar10.maybe_download_and_extract()
-  if tf.gfile.Exists(FLAGS.eval_dir):
-    tf.gfile.DeleteRecursively(FLAGS.eval_dir)
-  tf.gfile.MakeDirs(FLAGS.eval_dir)
+  if argv[-1] == "clean":
+    FLAGS.eval_dir = os.path.join(FLAGS.eval_dir, argv[-2])
+    FLAGS.checkpoint_dir = os.path.join(FLAGS.checkpoint_dir, argv[-2])
+    if tf.gfile.Exists(FLAGS.eval_dir):
+      print ("cleaning: "+ FLAGS.eval_dir)
+      tf.gfile.DeleteRecursively(FLAGS.eval_dir)
+    tf.gfile.MakeDirs(FLAGS.eval_dir)
+  else:
+    FLAGS.eval_dir = os.path.join(FLAGS.eval_dir, argv[-1])
+    FLAGS.checkpoint_dir = os.path.join(FLAGS.checkpoint_dir, argv[-1])
+    print("Attempt to continue from prexistion evaluation")
   evaluate()
-
 
 if __name__ == '__main__':
   tf.app.run()

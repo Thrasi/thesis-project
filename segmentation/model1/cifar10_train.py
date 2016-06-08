@@ -40,6 +40,9 @@ tf.app.flags.DEFINE_integer('max_steps',
 tf.app.flags.DEFINE_boolean('log_device_placement', 
                             False,
                             """Whether to log device placement.""")
+tf.app.flags.DEFINE_string('checkpoint_dir',
+                            os.path.join(FLAGS.root_dir,'model1/train'),
+                            """Directory where to read model checkpoints.""")
 CLASSES = ["bkg", "person", "chair", "car"]
 
 
@@ -57,11 +60,12 @@ def train():
     # inference model.
     print("before inference")
     print(images.get_shape())
-    logits = cifar10.inference(images)
+    logits, nr_params = cifar10.inference(images)
+    print("nr_params: "+str(nr_params) )
     print("after inference")
     # Calculate loss.
     loss = cifar10.loss(logits, labels)
-    accuracy, precision = cifar10.accuracy(logits, ground_truth)
+    accuracy, precision, cat_accs = cifar10.accuracy(logits, ground_truth)
 
     # Build a Graph that trains the model with one batch of examples and
     # updates the model parameters.
@@ -82,40 +86,43 @@ def train():
     # Start running operations on the Graph.
     sess = tf.Session(config=tf.ConfigProto(
         log_device_placement=FLAGS.log_device_placement))
-    sess.run(init)
+    ckpt = tf.train.get_checkpoint_state(FLAGS.checkpoint_dir)
+    if ckpt and ckpt.model_checkpoint_path:
+      # Restores from checkpoint
+      saver.restore(sess, ckpt.model_checkpoint_path)
+      # Assuming model_checkpoint_path looks something like:
+      #   /my-favorite-path/cifar10_train/model.ckpt-0,
+      # extract global_step from it.
+      global_step = int(ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1])
+    else:
+      print('No checkpoint file found')
+      print('Initializing new model')
+      sess.run(init)
+      global_step = 0
+
 
     # Start the queue runners.
     tf.train.start_queue_runners(sess=sess)
 
     summary_writer = tf.train.SummaryWriter(FLAGS.train_dir, sess.graph)
 
-    for step in xrange(FLAGS.max_steps):
+    for step in xrange(global_step, FLAGS.max_steps):
       start_time = time.time()
-      _, loss_value, accuracy_value, precision_value  = sess.run([train_op,
-                                                                  loss,
-                                                                  accuracy,
-                                                                  precision])
+      _, loss_value, accuracy_value, precision_value, cat_accs_val  = sess.run([train_op,
+                                                                                loss,
+                                                                                accuracy,
+                                                                                precision,
+                                                                                cat_accs])
                                                                   
-      # imgs, lbls,_, loss_value = sess.run([images, labels, train_op, loss])
       duration = time.time() - start_time
-      # print (accuracy_value)
-      # print (precision_value)
-      # print (accuracy_value[1])
-      # print (type(imgs))
-      # print (type(lbls))
-      # print (images.shape)
-      # print (labels.shape)
-      # plt.subplot(121)
-      # plt.imshow(imgs[0,:,:,:])
-      # plt.subplot(122)
-      # plt.imshow(lbls[0,:,:,0])
-      # plt.show()
+
       print (precision_value)
+      print (cat_accs_val)
       
       assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
 
-      precision_value = [0 if np.isnan(p) else p for p in precision_value]
-      print (precision_value)
+      #precision_value = [0 if np.isnan(p) else p for p in precision_value]
+      #print (precision_value)
       if step % 10 == 0:
         num_examples_per_step = FLAGS.batch_size
         examples_per_sec = num_examples_per_step / duration
@@ -135,6 +142,7 @@ def train():
         summary.value.add(tag='Accuracy (raw)', simple_value=float(accuracy_value))
         for i,s in enumerate(CLASSES):
           summary.value.add(tag="precision/"+s+" (raw)",simple_value=float(precision_value[i]))
+          summary.value.add(tag="accs/"+s+" (raw)",simple_value=float(cat_accs_val[i]))
 #        summary.value.add(tag='Human precision (raw)', simple_value=float(precision_value))
         summary_writer.add_summary(summary, step)
         print("hundred steps")
@@ -146,12 +154,16 @@ def train():
 
 
 def main(argv=None):  # pylint: disable=unused-argument
-  # cifar10.maybe_download_and_extract()
   if argv[-1] == "clean":
+    FLAGS.train_dir = os.path.join(FLAGS.train_dir, argv[-2])
     if tf.gfile.Exists(FLAGS.train_dir):
       print("cleaning: " + FLAGS.train_dir)
       tf.gfile.DeleteRecursively(FLAGS.train_dir)
     tf.gfile.MakeDirs(FLAGS.train_dir)
+  else:
+    FLAGS.train_dir = os.path.join(FLAGS.train_dir, argv[-1])
+    print("Attempt to continue from pre-existing model")
+  
 
   train()
 
