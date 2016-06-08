@@ -24,7 +24,8 @@ def conv2d(input, name, kernel_width, num_filters, transfer=tf.nn.elu, padding='
     bias = tf.nn.bias_add(conv, biases)
     x = transfer(bias, name=scope.name)
     _activation_summary(x)
-  return x
+    
+  return x, kernel_width*kernel_width*c*num_filters+num_filters
 
 
 def conv2d_transpose(input, name, kernel_width, num_filters,
@@ -52,7 +53,7 @@ def conv2d_transpose(input, name, kernel_width, num_filters,
     bias = tf.nn.bias_add(conv, biases)
     x = transfer(bias, name=scope.name)
     _activation_summary(x)
-  return x
+  return x, kernel_width*kernel_width*c*num_filters + b
 
 def _variable_on_cpu(name, shape, initializer):
   """Helper to create a Variable stored on CPU memory.

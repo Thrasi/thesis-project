@@ -54,7 +54,7 @@ FLAGS = tf.app.flags.FLAGS
 # Basic model parameters.
 tf.app.flags.DEFINE_integer('batch_size', 128,
                             """Number of images to process in a batch.""")
-tf.app.flags.DEFINE_string('root_dir', '/home/mb/Documents/kth/thesis-project/segmentation',
+tf.app.flags.DEFINE_string('root_dir', '/home/magnus/thesis-project/segmentation',
                             """Root directory of the segmentation task""")
 tf.app.flags.DEFINE_string('data_dir', os.path.join(FLAGS.root_dir,'data'),
                            """Path to the my data directory.""")
@@ -194,15 +194,17 @@ def inference(images):
   # conv1
   print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
   print(images.get_shape())
+  nr_params = 0
   shape = images.get_shape().as_list()
   SIZE1 = tf.constant(shape[1:3])
-  conv1 = helpers.conv2d(images,
+  conv1, nrp = helpers.conv2d(images,
                          name="conv1",
                          kernel_width=5,
                          num_filters=64,
                          transfer=tf.nn.relu,
                          decay_rate=DECAY_RATE)
   print("conv1: "+str(conv1.get_shape()))
+  nr_params += nrp
   # pool1
   pool1 = helpers.pool(conv1, name="pool1", kernel_width=2, stride=2)
   print("pool1: "+str(pool1.get_shape()))
@@ -213,12 +215,13 @@ def inference(images):
   shape = norm1.get_shape().as_list()
   SIZE2 = tf.constant(shape[1:3])
   # conv2
-  conv2 = helpers.conv2d(norm1,
+  conv2, nrp = helpers.conv2d(norm1,
                          name="conv2",
                          kernel_width=5,
                          num_filters=64,
                          transfer=tf.nn.relu,
                          decay_rate=DECAY_RATE)
+  nr_params += nrp
   print("conv2: "+str(conv2.get_shape()))
   # norm2
   norm2 = tf.nn.lrn(conv2, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
@@ -227,7 +230,7 @@ def inference(images):
   print("pool2: "+str(pool2.get_shape()))
   deconv_shape = pool2.get_shape()
   # conv3
-  conv3 = helpers.conv2d(pool2,
+  conv3, nrp = helpers.conv2d(pool2,
                         name="conv3",
                         kernel_width=6,
                         num_filters=128,
@@ -235,16 +238,18 @@ def inference(images):
                         padding="VALID",
                         decay_rate=DECAY_RATE)
   print("conv3: "+str(conv3.get_shape()))
+  nr_params += nrp
   # conv 4 1x1
-  conv4 = helpers.conv2d(conv3,
+  conv4, nrp = helpers.conv2d(conv3,
                         name="conv4-1x1",
                         kernel_width=1,
                         num_filters=128,
                         transfer=tf.nn.relu,
                         decay_rate=DECAY_RATE)
   print("conv4: "+str(conv4.get_shape()))
+  nr_params += nrp
   # deconv
-  deconv1 = helpers.conv2d_transpose(conv4,
+  deconv1, nrp = helpers.conv2d_transpose(conv4,
                           name="deconv1",
                           kernel_width=6,
                           num_filters=64,
@@ -253,36 +258,38 @@ def inference(images):
                           output_shape=deconv_shape,
                           decay_rate=DECAY_RATE)
   print("deconv1: "+str(deconv1.get_shape()))
+  nr_params += nrp
   unpool1 = tf.image.resize_nearest_neighbor(deconv1,
                                              SIZE2,
                                              align_corners=None,
                                              name="unpool1")
   print("unpool1: "+str(unpool1.get_shape()))
   # conv5
-  conv5 = helpers.conv2d(unpool1,
+  conv5, nrp = helpers.conv2d(unpool1,
                         name="conv5",
                         kernel_width=5,
                         num_filters=64,
                         transfer=tf.nn.relu,
                         decay_rate=DECAY_RATE)
   print("conv5: "+str(conv5.get_shape()))
+  nr_params += nrp
   unpool2 = tf.image.resize_nearest_neighbor(conv5,
                                               SIZE1,
                                               align_corners=None,
                                               name="unpool2")
   print("unpool2: "+str(unpool2.get_shape()))
   # conv6
-  conv6 = helpers.conv2d(unpool2,
+  conv6, nrp = helpers.conv2d(unpool2,
                         name="conv6",
                         kernel_width=5,
                         num_filters=NUM_CLASSES,
                         transfer=tf.nn.relu,
                         decay_rate=DECAY_RATE)
   print("conv6  : "+str(conv6.get_shape()))
-
+  nr_params += nrp
   
   
-  return conv6
+  return conv6, nr_params
 
 
 def loss(logits, labels):
@@ -348,6 +355,7 @@ def accuracy(logits, labels):
 
   cat_names = CLASSES
   precision = []
+  cat_acc = []
   for cat_id,cat in enumerate(cat_names):
     cat_pred = tf.equal(predictions, cat_id, name=cat+"_pred")
     cat_truth = tf.equal(reshaped_labels, cat_id, name=cat+"_truth")
@@ -362,29 +370,15 @@ def accuracy(logits, labels):
     tf.scalar_summary('cat_precisions/'+cat+'_tp_count', tp_count)
   
     precision.append( tp_count / (tp_count + fp_count) )
+
+    cat_correct = tf.logical_and(cat_truth, cat_pred, name=cat+"_correct")
+    cat_acc.append(tf.reduce_mean(tf.cast(cat_correct, "float"), name=cat+"_accuracy"))
   
-#    tf.add_to_collection('precision',human_precision)
-    
   precisions = tf.pack(precision)  
-#  human_pred = tf.equal(predictions,1)
-#  human_truth = tf.equal(reshaped_labels,1)
-#  non_human_truth = tf.not_equal(reshaped_labels,1)
-#  
-#  imgs_to_summarize = tf.expand_dims(tf.cast(shaped_predictions, 'float32'), -1)
-#  tf.image_summary('predictions', imgs_to_summarize)
-#    
-#  tp = tf.logical_and(human_pred, human_truth)
-#  tp_count = tf.reduce_sum(tf.cast(tp, "float"))
-#  fp = tf.logical_and(human_pred, non_human_truth)
-#  fp_count = tf.reduce_sum(tf.cast(fp, "float"))
-#  tf.scalar_summary('human_prec/fp_count', fp_count)
-#  tf.scalar_summary('human_prec/tp_count', tp_count)
-#  
-#  human_precision = tp_count / (tp_count + fp_count)
-#  
+  accuracies = tf.pack(cat_acc)
   tf.add_to_collection('precisions',precisions)
 
-  return accuracy, precisions
+  return accuracy, precisions, accuracies
 
 def _add_accuracy_precision_summaries(accuracy, precision):
   accuracy_averages = tf.train.ExponentialMovingAverage(0.9, name='avg')
