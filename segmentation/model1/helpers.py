@@ -27,12 +27,57 @@ def conv2d(input, name, kernel_width, num_filters, transfer=tf.nn.elu, padding='
     
   return x, kernel_width*kernel_width*c*num_filters+num_filters
 
+def upscore_layer(bottom, shape,
+                       num_classes, name, debug,
+                       ksize=4, stride=2):
+        strides = [1, stride, stride, 1]
+        with tf.variable_scope(name):
+            in_features = bottom.get_shape()[3].value
+
+            # if shape is None:
+            # Compute shape out of Bottom
+            in_shape = tf.shape(bottom)
+
+            h = ((in_shape[1] - 1) * stride) + 1
+            w = ((in_shape[2] - 1) * stride) + 1
+            new_shape = [in_shape[0], h, w, num_classes]
+            # else:
+            #     new_shape = [shape[0], shape[1], shape[2], num_classes]
+            print ("new_shape")
+            print (new_shape)
+            output_shape = tf.pack(new_shape)
+            print("output_shape")
+            print (output_shape)
+            # logging.debug("Layer: %s, Fan-in: %d" % (name, in_features))
+            f_shape = [ksize, ksize, num_classes, in_features]
+            print ("f_shape")
+            print (f_shape)
+            # create
+            num_input = ksize * ksize * in_features / stride
+            stddev = (2 / num_input)**0.5
+
+            # weights = self.get_deconv_filter(f_shape)
+            weights = _variable_with_weight_decay('weights',
+                                         shape=f_shape,
+                                         stddev=stddev,
+                                         wd=0)
+            print ("weights")
+            print(weights)
+            deconv = tf.nn.conv2d_transpose(bottom, weights, output_shape,
+                                            strides=strides, padding='VALID')
+        return deconv
 
 def conv2d_transpose(input, name, kernel_width, num_filters,
                      transfer=tf.nn.elu, padding='VALID', 
-                     decay_rate=0, output_shape=None):
+                     decay_rate=0, output_shape=None, 
+                     strides=[1, 1, 1, 1]):
+  print("transpose")
+  print(input)
   c = input.get_shape()[3].value
+  print (c)
   n = c * (kernel_width ** 2)
+  print(n)
+  print(output_shape)
   with tf.variable_scope(name) as scope:
     kernel = _variable_with_weight_decay('weights',
                                          shape=[kernel_width,
@@ -41,13 +86,17 @@ def conv2d_transpose(input, name, kernel_width, num_filters,
                                                 c],
                                          stddev=math.sqrt(2.0 / n),
                                          wd=decay_rate)
+    print (kernel)
     conv = tf.nn.conv2d_transpose(input,
                                   kernel,
                                   output_shape,
-                                  strides=[1, 1, 1, 1],
+                                  strides=strides,
                                   padding=padding)
+    print (conv)
     b = conv.get_shape().as_list()[-1]
+    print (b)
     biases = _variable_on_cpu('biases', [b], tf.constant_initializer(0.1))
+
     print("conv: "+str(conv.get_shape()))
     print("biases: "+str(biases.get_shape()))
     bias = tf.nn.bias_add(conv, biases)
@@ -89,6 +138,7 @@ def _variable_with_weight_decay(name, shape, stddev, wd):
   """
   var = _variable_on_cpu(name, shape,
                          tf.truncated_normal_initializer(stddev=stddev))
+  # print (var)
   if wd:
     weight_decay = tf.mul(tf.nn.l2_loss(var), wd, name='weight_loss')
     tf.add_to_collection('losses', weight_decay)

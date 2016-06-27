@@ -27,13 +27,13 @@ import tensorflow as tf
 # Process images of this size. Note that this differs from the original CIFAR
 # image size of 64 x 64. If one alters this number, then the entire model
 # architecture will change and any model would need to be retrained.
-IMAGE_SIZE = 64
+IMAGE_SIZE = 230
 
 # Global constants describing the CIFAR-10 data set.
-NUM_CLASSES = 4
-NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 74404
-NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 36065
-
+NUM_CLASSES = 2
+NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 10#74404
+NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 1#36065
+PAD_WIDTH = 16
 FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string('training_data', 'coco64by64train.tfrecords',
@@ -97,7 +97,7 @@ def _generate_image_and_label_batch(image, label_with_ignore, label, min_queue_e
   """
   # Create a queue that shuffles the examples, and then
   # read 'batch_size' images + labels from the example queue.
-  num_preprocess_threads = 4
+  num_preprocess_threads = 1
   if shuffle:
     images, label_with_ignore_batch, label_batch = tf.train.shuffle_batch(
         [image, label_with_ignore, label],
@@ -161,10 +161,14 @@ def distorted_inputs(data_dir, batch_size):
   distorted_image = tf.image.random_flip_left_right(distorted_image)
 
   # Separate the image and mask.
+
   label_with_ignore = distorted_image[0:width,0:height,3:4]
   label =  distorted_image[0:width,0:height,4:]
+  # distorted_image = tf.pad(distorted_image[0:width,0:height,0:3],
+  #                         [[PAD_WIDTH,PAD_WIDTH],[PAD_WIDTH,PAD_WIDTH],[0,0]], 
+  #                         mode="SYMMETRIC", 
+  #                         name="mirror_pad")
   distorted_image = distorted_image[0:width,0:height,0:3]
-
   
 
   # Because these operations are not commutative, consider randomizing

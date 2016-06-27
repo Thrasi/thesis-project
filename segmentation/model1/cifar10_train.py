@@ -27,6 +27,7 @@ import tensorflow as tf
 
 import cifar10
 import matplotlib.pyplot as plt
+import vgg16
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -60,11 +61,24 @@ def train():
     # inference model.
     print("before inference")
     print(images.get_shape())
-    logits, nr_params = cifar10.inference(images)
+    # logits, nr_params = cifar10.inference(images)
+    vgg = vgg16.Vgg16()  
+    with tf.name_scope("content_vgg"):
+      vgg.build(images)
+    logits = vgg.resized
+    print (logits)
+    nr_params = 3
+    # logits = vgg.deconv1
+
+    # nr_params = 10
     print("nr_params: "+str(nr_params) )
     print("after inference")
+    print (logits)
+    # print (logits2)
+    print (labels)
     # Calculate loss.
     loss = cifar10.loss(logits, labels)
+    print (loss)
     accuracy, precision, cat_accs = cifar10.accuracy(logits, ground_truth)
 
     # Build a Graph that trains the model with one batch of examples and

@@ -52,9 +52,9 @@ import helpers
 FLAGS = tf.app.flags.FLAGS
 
 # Basic model parameters.
-tf.app.flags.DEFINE_integer('batch_size', 128,
+tf.app.flags.DEFINE_integer('batch_size', 1,
                             """Number of images to process in a batch.""")
-tf.app.flags.DEFINE_string('root_dir', '/home/magnus/thesis-project/segmentation',
+tf.app.flags.DEFINE_string('root_dir', '/home/mb/Documents/kth/thesis-project/segmentation',
                             """Root directory of the segmentation task""")
 tf.app.flags.DEFINE_string('data_dir', os.path.join(FLAGS.root_dir,'data'),
                            """Path to the my data directory.""")
@@ -192,6 +192,9 @@ def inference(images):
   # by replacing all instances of tf.get_variable() with tf.Variable().
   #
   # conv1
+
+
+
   print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
   print(images.get_shape())
   nr_params = 0
@@ -199,97 +202,184 @@ def inference(images):
   SIZE1 = tf.constant(shape[1:3])
   conv1, nrp = helpers.conv2d(images,
                          name="conv1",
-                         kernel_width=5,
-                         num_filters=64,
+                         kernel_width=3,
+                         num_filters=1,
                          transfer=tf.nn.relu,
                          decay_rate=DECAY_RATE)
   print("conv1: "+str(conv1.get_shape()))
-  nr_params += nrp
   # pool1
   pool1 = helpers.pool(conv1, name="pool1", kernel_width=2, stride=2)
   print("pool1: "+str(pool1.get_shape()))
-  # norm1
-  norm1 = tf.nn.lrn(pool1, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
-                    name='norm1')
 
-  shape = norm1.get_shape().as_list()
-  SIZE2 = tf.constant(shape[1:3])
-  # conv2
-  conv2, nrp = helpers.conv2d(norm1,
+  output_shape = images.get_shape().as_list()
+  deconv_shape = [output_shape[0],output_shape[1],output_shape[2],NUM_CLASSES]  
+  # deconv1, nrp = helpers.conv2d_transpose(pool1,
+  #                         name="deconv1",
+  #                         kernel_width=2,
+  #                         num_filters=2,
+  #                         transfer=tf.nn.relu,
+  #                         padding="VALID",
+  #                         output_shape=deconv_shape,
+  #                         decay_rate=DECAY_RATE,
+  #                         strides=[1,2,2,1])
+  
+
+  ### conv 2
+  conv2, nrp = helpers.conv2d(pool1,
                          name="conv2",
-                         kernel_width=5,
-                         num_filters=64,
+                         kernel_width=3,
+                         num_filters=1,
+                         transfer=tf.nn.relu,
+                         decay_rate=DECAY_RATE)
+  print("conv2: "+str(conv2.get_shape()))
+  ### pool 2
+  pool2 = helpers.pool(conv2, name="pool2", kernel_width=2, stride=2)
+  print("pool2: "+str(pool2.get_shape()))
+
+  # nr_params += nrp
+  # output_shape = images.get_shape().as_list()
+  # deconv_shape = [output_shape[0],output_shape[1],output_shape[2],NUM_CLASSES]  
+  # print ("deconv_shape")
+  # print (deconv_shape)
+  # print (pool2)
+  # deconv1 = helpers.upscore_layer(pool2, shape=tf.pack(deconv_shape),
+  #                                           num_classes=NUM_CLASSES,
+  #                                           debug=False,
+  #                                           name='up', 
+  #                                           ksize=4, 
+  #                                           stride=2)
+  # deconv1, nrp = helpers.conv2d_transpose(pool2,
+  #                         name="deconv1",
+  #                         kernel_width=4,
+  #                         num_filters=2,
+  #                         transfer=tf.nn.relu,
+  #                         padding="VALID",
+  #                         output_shape=deconv_shape,
+  #                         decay_rate=DECAY_RATE,
+  #                         strides=[1,4,4,1])
+  # print("deconv1: "+str(deconv1.get_shape()))
+  
+  # shape = pool1.get_shape().as_list()
+  # SIZE2 = tf.constant(shape[1:3])
+  ### conv3
+  conv3, nrp = helpers.conv2d(pool2,
+                         name="conv3",
+                         kernel_width=3,
+                         num_filters=1,
                          transfer=tf.nn.relu,
                          decay_rate=DECAY_RATE)
   nr_params += nrp
-  print("conv2: "+str(conv2.get_shape()))
-  # norm2
-  norm2 = tf.nn.lrn(conv2, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
-                    name='norm2')
-  pool2 = helpers.pool(norm2, name="pool2", kernel_width=3, stride=2)
-  print("pool2: "+str(pool2.get_shape()))
-  deconv_shape = pool2.get_shape()
-  # conv3
-  conv3, nrp = helpers.conv2d(pool2,
-                        name="conv3",
-                        kernel_width=6,
-                        num_filters=128,
-                        transfer=tf.nn.relu,
-                        padding="VALID",
-                        decay_rate=DECAY_RATE)
   print("conv3: "+str(conv3.get_shape()))
-  nr_params += nrp
-  # conv 4 1x1
-  conv4, nrp = helpers.conv2d(conv3,
-                        name="conv4-1x1",
-                        kernel_width=1,
-                        num_filters=128,
-                        transfer=tf.nn.relu,
-                        decay_rate=DECAY_RATE)
+  
+  pool3 = helpers.pool(conv3, name="pool3", kernel_width=2, stride=2)
+                                            
+  print("conv3: "+str(conv3.get_shape()))
+  # deconv1, nrp = helpers.conv2d_transpose(pool3,
+  #                         name="deconv1",
+  #                         kernel_width=8,
+  #                         num_filters=2,
+  #                         transfer=tf.nn.relu,
+  #                         padding="VALID",
+  #                         output_shape=deconv_shape,
+  #                         decay_rate=DECAY_RATE,
+  #                         strides=[1,8,8,1])
+  
+  ### conv 4
+  conv4, nrp = helpers.conv2d(pool3,
+                         name="conv4",
+                         kernel_width=3,
+                         num_filters=1,
+                         transfer=tf.nn.relu,
+                         decay_rate=DECAY_RATE)
   print("conv4: "+str(conv4.get_shape()))
-  nr_params += nrp
-  # deconv
-  deconv1, nrp = helpers.conv2d_transpose(conv4,
+  ### pool 4
+  pool4 = helpers.pool(conv4, name="pool4", kernel_width=2, stride=2)
+  print("pool4: "+str(pool4.get_shape()))
+
+  deconv1, nrp = helpers.conv2d_transpose(pool4,
                           name="deconv1",
-                          kernel_width=6,
-                          num_filters=64,
+                          kernel_width=16,
+                          num_filters=2,
                           transfer=tf.nn.relu,
-                          padding="VALID",
+                          padding="SAME",
                           output_shape=deconv_shape,
-                          decay_rate=DECAY_RATE)
-  print("deconv1: "+str(deconv1.get_shape()))
-  nr_params += nrp
-  unpool1 = tf.image.resize_nearest_neighbor(deconv1,
-                                             SIZE2,
-                                             align_corners=None,
-                                             name="unpool1")
-  print("unpool1: "+str(unpool1.get_shape()))
-  # conv5
-  conv5, nrp = helpers.conv2d(unpool1,
-                        name="conv5",
-                        kernel_width=5,
-                        num_filters=64,
-                        transfer=tf.nn.relu,
-                        decay_rate=DECAY_RATE)
-  print("conv5: "+str(conv5.get_shape()))
-  nr_params += nrp
-  unpool2 = tf.image.resize_nearest_neighbor(conv5,
-                                              SIZE1,
-                                              align_corners=None,
-                                              name="unpool2")
-  print("unpool2: "+str(unpool2.get_shape()))
-  # conv6
-  conv6, nrp = helpers.conv2d(unpool2,
-                        name="conv6",
-                        kernel_width=5,
-                        num_filters=NUM_CLASSES,
-                        transfer=tf.nn.relu,
-                        decay_rate=DECAY_RATE)
-  print("conv6  : "+str(conv6.get_shape()))
-  nr_params += nrp
+                          decay_rate=DECAY_RATE,
+                          strides=[1,16,16,1])
+
+
+  # print("pool2: "+str(pool2.get_shape()))
+  # deconv_shape = pool2.get_shape()
+  # # conv3
+  # conv3, nrp = helpers.conv2d(pool2,
+  #                       name="conv3",
+  #                       kernel_width=6,
+  #                       num_filters=128,
+  #                       transfer=tf.nn.relu,
+  #                       padding="VALID",
+  #                       decay_rate=DECAY_RATE)
+  # print("conv3: "+str(conv3.get_shape()))
+  # nr_params += nrp
+  # # conv 4 1x1
+  # conv4, nrp = helpers.conv2d(conv3,
+  #                       name="conv4-1x1",
+  #                       kernel_width=1,
+  #                       num_filters=128,
+  #                       transfer=tf.nn.relu,
+  #                       decay_rate=DECAY_RATE)
+  # print("conv4: "+str(conv4.get_shape()))
+  # nr_params += nrp
+  # # deconv
+
+  print ("####################################")
+  # print (conv4)
+  print (deconv_shape)
+
+
+  # deconv1, nrp = helpers.conv2d_transpose(conv4,
+  #                         name="deconv1",
+  #                         kernel_width=6,
+  #                         num_filters=64,
+  #                         transfer=tf.nn.relu,
+  #                         padding="VALID",
+  #                         output_shape=deconv_shape,
+  #                         decay_rate=DECAY_RATE)
+  # print("deconv1: "+str(deconv1.get_shape()))
+  # nr_params += nrp
+
+  nr_params += nrp  
+
+  # unpool1 = tf.image.resize_nearest_neighbor(deconv1,
+  #                                            SIZE2,
+  #                                            align_corners=None,
+  #                                            name="unpool1")
+  # print("unpool1: "+str(unpool1.get_shape()))
+  # # conv5
+  # conv5, nrp = helpers.conv2d(unpool1,
+  #                       name="conv5",
+  #                       kernel_width=5,
+  #                       num_filters=64,
+  #                       transfer=tf.nn.relu,
+  #                       decay_rate=DECAY_RATE)
+  # print("conv5: "+str(conv5.get_shape()))
+  # nr_params += nrp
+  # unpool2 = tf.image.resize_nearest_neighbor(conv5,
+  #                                             SIZE1,
+  #                                             align_corners=None,
+  #                                             name="unpool2")
+  # print("unpool2: "+str(unpool2.get_shape()))
+  # # conv6
+  # conv6, nrp = helpers.conv2d(unpool2,
+  #                       name="conv6",
+  #                       kernel_width=5,
+  #                       num_filters=NUM_CLASSES,
+  #                       transfer=tf.nn.relu,
+  #                       decay_rate=DECAY_RATE)
+  # print("conv6  : "+str(conv6.get_shape()))
+  # nr_params += nrp
   
   
-  return conv6, nr_params
+  # return conv6, nr_params
+  return deconv1, nr_params
 
 
 def loss(logits, labels):
