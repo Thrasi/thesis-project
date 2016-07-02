@@ -27,6 +27,7 @@ def conv2d(input, name, kernel_width, num_filters, transfer=tf.nn.elu, padding='
     
   return x, kernel_width*kernel_width*c*num_filters+num_filters
 
+
 def upscore_layer(bottom, shape,
                        num_classes, name, debug,
                        ksize=4, stride=2):

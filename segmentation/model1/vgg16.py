@@ -50,47 +50,61 @@ class Vgg16:
         # self.conv1_1 = self.conv_layer(bgr, "conv1_1")
         self.conv1_1 = self.conv2d(bgr, "conv1_1")
         print self.conv1_1
-        self.conv1_2 = self.conv_layer(self.conv1_1, "conv1_2")
+        # self.conv1_2 = self.conv_layer(self.conv1_1, "conv1_2")
+        self.conv1_2 = self.conv2d(self.conv1_1, "conv1_2")
         print self.conv1_2
         self.pool1 = self.max_pool(self.conv1_2, 'pool1')
         print self.pool1
 
-        self.conv2_1 = self.conv_layer(self.pool1, "conv2_1")
+        # self.conv2_1 = self.conv_layer(self.pool1, "conv2_1")
+        self.conv2_1 = self.conv2d(self.pool1, "conv2_1")
         print self.conv2_1
-        self.conv2_2 = self.conv_layer(self.conv2_1, "conv2_2")
+        # self.conv2_2 = self.conv_layer(self.conv2_1, "conv2_2")
+        self.conv2_2 = self.conv2d(self.conv2_1, "conv2_2")
         print self.conv2_2
         self.pool2 = self.max_pool(self.conv2_2, 'pool2')
         print self.pool2
 
-        self.conv3_1 = self.conv_layer(self.pool2, "conv3_1")
+        # self.conv3_1 = self.conv_layer(self.pool2, "conv3_1")
+        self.conv3_1 = self.conv2d(self.pool2, "conv3_1")
         print self.conv3_1
-        self.conv3_2 = self.conv_layer(self.conv3_1, "conv3_2")
+        # self.conv3_2 = self.conv_layer(self.conv3_1, "conv3_2")
+        self.conv3_2 = self.conv2d(self.conv3_1, "conv3_2")
         print self.conv3_2
-        self.conv3_3 = self.conv_layer(self.conv3_2, "conv3_3")
+        # self.conv3_3 = self.conv_layer(self.conv3_2, "conv3_3")
+        self.conv3_3 = self.conv2d(self.conv3_2, "conv3_3")
         print self.conv3_3
         self.pool3 = self.max_pool(self.conv3_3, 'pool3')
         print self.pool3
 
-        self.conv4_1 = self.conv_layer(self.pool3, "conv4_1")
+        # self.conv4_1 = self.conv_layer(self.pool3, "conv4_1")
+        self.conv4_1 = self.conv2d(self.pool3, "conv4_1")
         print self.conv4_1
-        self.conv4_2 = self.conv_layer(self.conv4_1, "conv4_2")
+        # self.conv4_2 = self.conv_layer(self.conv4_1, "conv4_2")
+        self.conv4_2 = self.conv2d(self.conv4_1, "conv4_2")
         print self.conv4_2
-        self.conv4_3 = self.conv_layer(self.conv4_2, "conv4_3")
+        # self.conv4_3 = self.conv_layer(self.conv4_2, "conv4_3")
+        self.conv4_3 = self.conv2d(self.conv4_2, "conv4_3")
         print self.conv4_3
         self.pool4 = self.max_pool(self.conv4_3, 'pool4')
         print self.pool4
 
-        self.conv5_1 = self.conv_layer(self.pool4, "conv5_1")
+        # self.conv5_1 = self.conv_layer(self.pool4, "conv5_1")
+        self.conv5_1 = self.conv2d(self.pool4, "conv5_1")
         print self.conv5_1
-        self.conv5_2 = self.conv_layer(self.conv5_1, "conv5_2")
+        # self.conv5_2 = self.conv_layer(self.conv5_1, "conv5_2")
+        self.conv5_2 = self.conv2d(self.conv5_1, "conv5_2")
         print self.conv5_2
-        self.conv5_3 = self.conv_layer(self.conv5_2, "conv5_3")
+        # self.conv5_3 = self.conv_layer(self.conv5_2, "conv5_3")
+        self.conv5_3 = self.conv2d(self.conv5_2, "conv5_3")
         print self.conv5_3
         self.pool5 = self.max_pool(self.conv5_3, 'pool5')
         print self.pool5
-        self.fc6 = self.conv_layer(self.pool5, 'fc6', shape=[7,7,512,4096], padding='VALID')
+        # self.fc6 = self.conv_layer(self.pool5, 'fc6', shape=[7,7,512,4096], padding='VALID')
+        self.fc6 = self.conv2d(self.pool5, "fc6", shape=[7,7,512,4096], padding='VALID')
         print self.fc6
-        self.fc7 = self.conv_layer(self.fc6, 'fc7', shape=[1,1,4096,4096], padding='VALID')
+        # self.fc7 = self.conv_layer(self.fc6, 'fc7', shape=[1,1,4096,4096], padding='VALID')
+        self.fc7 = self.conv2d(self.fc6, 'fc7', shape=[1,1,4096,4096], padding='VALID')
         print self.fc7
 
         # self.fc8 = self.conv_layer(self.fc7, "fc8", shape=[1,1,4096,2], padding='VALID')
@@ -104,16 +118,6 @@ class Vgg16:
         print self.resized
         self.data_dict = None
 
-        # helpers.conv2d_transpose
-        # deconv_shape = [1,230,230,1000]
-        # self.deconv1, nrp = helpers.conv2d_transpose(self.fc8,
-        #                   name="upsample8",
-        #                   kernel_width=32,
-        #                   num_filters=2,
-        #                   transfer=tf.nn.relu,
-        #                   padding="VALID",
-        #                   output_shape=deconv_shape,
-        #                   decay_rate=7)
         print (self.fc8)
 
 
