@@ -26,9 +26,9 @@ import tensorflow as tf
 
 # Global constants describing the CIFAR-10 data set.
 NUM_CLASSES = 2
-NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 10#74404
-NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 1#36065
-PAD_WIDTH = 16
+NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 45041
+NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 21579
+PAD_WIDTH = 0
 TOTAL_NUM_CHANNELS = 4
 FLAGS = tf.app.flags.FLAGS
 
@@ -91,29 +91,17 @@ def _generate_image_and_label_batch(image, label, min_queue_examples,
     images: Images. 4D tensor of [batch_size, height, width, 3] size.
     labels: Labels. 3D tensor of [batch_size, height, width] size.
   """
-  # Create a queue that shuffles the examples, and then
-  # read 'batch_size' images + labels from the example queue.
-  num_preprocess_threads = 1
-  if shuffle:
-    images, label_batch = tf.train.shuffle_batch(
-        [image, label],
-        batch_size=batch_size,
-        num_threads=num_preprocess_threads,
-        capacity=min_queue_examples + 3 * batch_size,
-        min_after_dequeue=min_queue_examples)
-  else:
-    images, label_batch = tf.train.batch(
-        [image, label],
-        batch_size=batch_size,
-        num_threads=num_preprocess_threads,
-        capacity=min_queue_examples + 3 * batch_size)
 
   # Display the training images in the visualizer.
-  tf.image_summary('images', images)
-  tf.image_summary('truth', label_batch)
+  print("image in gen_batch")
+  print(image)
+  image = tf.expand_dims(image, 0)
+  label = tf.expand_dims(label, 0)
+  tf.image_summary('images', image)
+  tf.image_summary('truth', label)
   # tf.image_summary('truth_with_ignore', label_with_ignore_batch)
 
-  return images, label_batch 
+  return image, tf.cast(label, dtype=tf.int32)
 
 
 def distorted_inputs(data_dir, batch_size):
@@ -143,7 +131,8 @@ def distorted_inputs(data_dir, batch_size):
 
   height = read_input.height
   width = read_input.width
-
+  print(width)
+  print(height)
   # Image processing for training the network. Note the many random
   # distortions applied to the image.
 
@@ -157,17 +146,13 @@ def distorted_inputs(data_dir, batch_size):
   distorted_image = tf.image.random_flip_left_right(distorted_image)
 
   # Separate the image and mask.
-  ### with ignore
-  # label_with_ignore = distorted_image[0:width,0:height,3:4]
-  # label = distorted_image[0:width,0:height,4:]
-  ### without ignore
-  label = distorted_image[:,:,3:]
-  # distorted_image = tf.pad(distorted_image[0:width,0:height,0:3],
-  #                         [[PAD_WIDTH,PAD_WIDTH],[PAD_WIDTH,PAD_WIDTH],[0,0]], 
-  #                         mode="SYMMETRIC", 
-  #                         name="mirror_pad")
-  distorted_image = distorted_image[:,:,0:3]
-  
+  label = distorted_image[0:,0:,3:4]
+  distorted_image = tf.pad(distorted_image[0:,0:,0:3],
+                           [[PAD_WIDTH,PAD_WIDTH],[PAD_WIDTH,PAD_WIDTH],[0,0]], 
+                           mode="SYMMETRIC", 
+                           name="mirror_pad")
+  print(distorted_image)
+  distorted_image = distorted_image[0:,0:,0:3]
 
   # Because these operations are not commutative, consider randomizing
   # the order their operation.
@@ -189,7 +174,7 @@ def distorted_inputs(data_dir, batch_size):
   # Generate a batch of images and labels by building up a queue of examples.
   return _generate_image_and_label_batch(float_image, label, 
                                          min_queue_examples, batch_size,
-                                         shuffle=True)
+                                         shuffle=False)
 
 
 def inputs(eval_data, data_dir, batch_size):
@@ -230,18 +215,10 @@ def inputs(eval_data, data_dir, batch_size):
   ### Here we don't crop the center because the image is 64x64
   ### But if the image is larger we need to think if how to do this.
   ### Or if All since we use an FCN
-  # Image processing for evaluation.
-  # Crop the central [height, width] of the image.
-  # resized_image = tf.image.resize_image_with_crop_or_pad(reshaped_image,
-  #                                                        width, height)
   resized_image = reshaped_image
-  ### with ignore
-  # label_with_ignore = resized_image[0:width,0:height,3:4]
-  # label = resized_image[0:width,0:height,4:5]
-  ### without ignore
-  label = resized_image[:,:,3:]
+  label = resized_image[0:height,0:width,3:]
 
-  resized_image = resized_image[:,:,0:3]
+  resized_image = resized_image[0:height,0:width,0:3]
 
   # Subtract off the mean and divide by the variance of the pixels.
   float_image = tf.image.per_image_whitening(resized_image)
