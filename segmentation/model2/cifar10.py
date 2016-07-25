@@ -118,6 +118,7 @@ def inputs(eval_data):
                               batch_size=FLAGS.batch_size)
 
 def accuracy(logits, labels, num_classes):
+  collection = "metrics"
   def tf_count(t, val):
     elements_equal_to_value = tf.equal(t, val)
     as_ints = tf.cast(elements_equal_to_value, tf.int32)
@@ -132,14 +133,18 @@ def accuracy(logits, labels, num_classes):
   shaped_predictions = tf.argmax(logits, dimension=3)
   correct_predictions = tf.equal(predictions, reshaped_labels)
   accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name='accuracy')
-  tf.add_to_collection('accuracy', accuracy)
-  tf.histogram_summary('predictions_hist', predictions)
+  tf.add_to_collection(collection, accuracy)
+  
+  if FLAGS.histograms:
+    tf.histogram_summary('predictions_hist', predictions)
+    
   imgs_to_summarize = tf.expand_dims(tf.cast(shaped_predictions, 'float32'), -1)
   tf.image_summary('predictions', imgs_to_summarize)
 
   cat_names = CLASSES
   precision = []
   cat_acc = []
+  i_o_u = []
   for cat_id,cat in enumerate(cat_names):
     cat_pred = tf.equal(predictions, cat_id, name=cat+"_pred")
     cat_truth = tf.equal(reshaped_labels, cat_id, name=cat+"_truth")
@@ -149,37 +154,43 @@ def accuracy(logits, labels, num_classes):
     tp_count = tf.reduce_sum(tf.cast(tp, "float"), name=cat+"_tp_count")
     fp = tf.logical_and(cat_pred, non_cat_truth, name=cat+"_fp")
     fp_count = tf.reduce_sum(tf.cast(fp, "float"), name=cat+"_fp_count")
-
-    tf.scalar_summary('cat_precisions/'+cat+'_fp_count', fp_count)
-    tf.scalar_summary('cat_precisions/'+cat+'_tp_count', tp_count)
-  
-    precision.append( tp_count / (tp_count + fp_count) )
-
+    
+    prec = tf.div(tp_count, tp_count+fp_count+tf.constant(1e-10), name=cat+"_precision")
+    
+    precision.append( prec )
+    tf.add_to_collection(collection, prec)
+    
     cat_correct = tf.logical_and(cat_truth, cat_pred, name=cat+"_correct")
     cat_acc.append(tf.reduce_mean(tf.cast(cat_correct, "float"), name=cat+"_accuracy"))
+    cat_sum = tf.reduce_sum(tf.cast(cat_correct, "float"))
+    truth_sum = tf.reduce_sum(tf.cast(cat_truth, "float"))
+    cat_accuracy = tf.div(cat_sum, truth_sum, name=cat+"_accuracy")
+    tf.add_to_collection(collection, cat_accuracy)
+
+    
+    intersection = tp_count
+    union = tf.reduce_sum(tf.cast(cat_pred, "float")) + tf.reduce_sum(tf.cast(cat_truth, "float")) - tp_count
+    iou = tf.div(intersection, union, name=cat+"_iou")
+    i_o_u.append(iou)
+    tf.add_to_collection(collection, iou)
   
   precisions = tf.pack(precision)  
   accuracies = tf.pack(cat_acc)
+  ious = tf.pack(i_o_u)
   tf.add_to_collection('precisions',precisions)
 
-  return accuracy, precisions, accuracies
+  return accuracy, precisions, accuracies, ious
 
-def _add_accuracy_precision_summaries(accuracy, precision):
-  accuracy_averages = tf.train.ExponentialMovingAverage(0.9, name='avg')
-  accuracy_average_op = accuracy_averages.apply(accuracy)
+def _add_metric_summaries():
+  metric_averages = tf.train.ExponentialMovingAverage(0.9, name='metric_avg')
+  metrics = tf.get_collection("metrics")
+  metric_averages_op = metric_averages.apply(metrics)
 
-  for a in accuracy:
-    tf.scalar_summary(a.op.name +' (raw)', a)
-    tf.scalar_summary(a.op.name, accuracy_averages.average(a))
+  for m in metrics:
+    tf.scalar_summary("metrics/"+m.op.name + ' (raw)', m)
+    tf.scalar_summary("metrics/"+m.op.name, metric_averages.average(m))
 
-#  precision_averages = tf.train.ExponentialMovingAverage(0.9, name='avg')
-#  precisions = tf.get_collection('precision')
-#  precision_average_op = accuracy_averages.apply(precisions + [precision])  
-
-#  for p in precisions + [precisions]:
-#    tf.scalar_summary("human_precision (raw)", p)
-#    tf.scalar_summary("human_precision", precision_averages.average(p))
-  return accuracy_average_op#, precision_average_op
+  return metric_averages_op
 
 
 def _add_loss_summaries(total_loss):
@@ -226,19 +237,11 @@ def train(total_loss, global_step):
   num_batches_per_epoch = NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN / FLAGS.batch_size
   decay_steps = int(num_batches_per_epoch * NUM_EPOCHS_PER_DECAY)
 
-  # Decay the learning rate exponentially based on the number of steps.
-#  lr = tf.train.exponential_decay(INITIAL_LEARNING_RATE,
-#                                  global_step,
-#                                  decay_steps,
-#                                  LEARNING_RATE_DECAY_FACTOR,
-#                                  staircase=True)
-#  tf.scalar_summary('learning_rate', lr)
-
   # Generate moving averages of all losses and associated summaries.
   loss_averages_op = _add_loss_summaries(total_loss)
-
+  metric_averages_op = _add_metric_summaries()
   # Compute gradients.
-  with tf.control_dependencies([loss_averages_op]):
+  with tf.control_dependencies([loss_averages_op, metric_averages_op]):
     # opt = tf.train.GradientDescentOptimizer(lr)
     opt = tf.train.AdamOptimizer(learning_rate=INITIAL_LEARNING_RATE,
                                        beta1=MOMENT_DECAY_RATE1,

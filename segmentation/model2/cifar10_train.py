@@ -74,7 +74,7 @@ def train(argv):
     # Calculate loss.
     loss = fcn.loss.loss(logits, labels, cifar10.NUM_CLASSES)
     print (loss)
-    accuracy, precision, cat_accs = cifar10.accuracy(logits, labels, cifar10.NUM_CLASSES)
+    accuracy, precision, cat_accs, ious = cifar10.accuracy(logits, labels, cifar10.NUM_CLASSES)
 
 
 
@@ -83,12 +83,6 @@ def train(argv):
       ema_assign_op = ema.apply([value])
       tf.scalar_summary("averages/"+plot_name+"_avg", ema.average(value))
       return ema_assign_op
-
-    total_accuracy = create_avg(accuracy, "acc_avg", "total_accuracy")
-    bkg_precision = create_avg(precision[0], "bkg_prec_avg", "bkg_precision")
-    person_precision = create_avg(precision[1], "pers_prec_avg", "person_precision")
-    bkg_accuracy = create_avg(cat_accs[0], "bkg_acc_avg", "bkg_accuracy")
-    person_accuracy = create_avg(cat_accs[1], "pers_acc_avg", "person_accuracy")
 
     # updates the model parameters.
     train_op = cifar10.train(loss, global_step)
@@ -128,30 +122,25 @@ def train(argv):
 
     for step in xrange(global_step, FLAGS.max_steps):
       start_time = time.time()
-#      _, loss_value= sess.run([train_op, loss])
-#      accuracy_value = 1.
-#      precision_value = [1., 1.]
-#      cat_accs_val = [1.,1.]
-      _, loss_value, accuracy_value, precision_value, cat_accs_val, _,_,_,_,_ = sess.run([train_op,
-                                                                                loss,
-                                                                                accuracy,
-                                                                                precision,
-                                                                                  cat_accs,
-                                                                                  total_accuracy,
-                                                                                  bkg_precision,
-                                                                                  person_precision,
-                                                                                  bkg_accuracy,
-                                                                                  person_accuracy])
-
+      _, loss_value, accuracy_value, precision_value, cat_accs_val = sess.run([train_op,
+                                                                                              loss,
+                                                                                              accuracy,
+                                                                                              precision,
+                                                                                              cat_accs])
+                                                                  
       duration = time.time() - start_time
-
+      print ("before filtering")
       print (precision_value)
       print (cat_accs_val)
      
       assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
 
       precision_value = [0 if np.isnan(p) else p for p in precision_value]
+      print ("precision")
       print (precision_value)
+      print ("accuracies")
+      print (cat_accs_val)
+      
       if step % 10 == 0:
         num_examples_per_step = FLAGS.batch_size
         examples_per_sec = num_examples_per_step / duration
@@ -170,13 +159,13 @@ def train(argv):
 
         summary_writer.add_summary(summary_str, step)
 
-        summary = tf.Summary()
-        summary.value.add(tag='Accuracy (raw)', simple_value=float(accuracy_value))
-        for i,s in enumerate(CLASSES):
-          summary.value.add(tag="precision/"+s+" (raw)",simple_value=float(precision_value[i]))
-          summary.value.add(tag="accs/"+s+" (raw)",simple_value=float(cat_accs_val[i]))
+#        summary = tf.Summary()
+#        summary.value.add(tag='Accuracy (raw)', simple_value=float(accuracy_value))
+#        for i,s in enumerate(CLASSES):
+#          summary.value.add(tag="precision/"+s+" (raw)",simple_value=float(precision_value[i]))
+#          summary.value.add(tag="accs/"+s+" (raw)",simple_value=float(cat_accs_val[i]))
 #        summary.value.add(tag='Human precision (raw)', simple_value=float(precision_value))
-        summary_writer.add_summary(summary, step)
+#        summary_writer.add_summary(summary, step)
         print("hundred steps")
       # Save the model checkpoint periodically.
       if step % 1000 == 0 or (step + 1) == FLAGS.max_steps:

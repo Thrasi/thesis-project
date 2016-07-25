@@ -216,9 +216,9 @@ def inputs(eval_data, data_dir, batch_size):
   ### But if the image is larger we need to think if how to do this.
   ### Or if All since we use an FCN
   resized_image = reshaped_image
-  label = resized_image[0:height,0:width,3:]
+  label = resized_image[0:,0:,3:4]
 
-  resized_image = resized_image[0:height,0:width,0:3]
+  resized_image = resized_image[0:,0:,0:3]
 
   # Subtract off the mean and divide by the variance of the pixels.
   float_image = tf.image.per_image_whitening(resized_image)
